@@ -1,6 +1,7 @@
 import pyhop
 import csv
 
+
 # Load recipes from CSV
 def load_recipes_from_csv(filename):
     recipes = []
@@ -15,8 +16,7 @@ def load_recipes_from_csv(filename):
                 'category': row['category'],
                 'area': row['area'],
                 'instructions': row['instructions'],
-                'ingredients': [ingredient[0].strip().lower() for ingredient in ingredients],
-                'cooking_time': 30  # Placeholder for cooking time (you can extract this from instructions if available)
+                'ingredients': ingredients,  # Store as list of tuples
             }
             recipes.append(recipe)
     return recipes
@@ -33,25 +33,19 @@ class State:
             len(self.recipes), self.ingredients, len(self.matched_recipes)
         )
 
-
-# Define methods for task decomposition
 def method_find_recipes(state, ingredients):
     print(f"Running method_find_recipes with ingredients: {ingredients}")
     matching_recipes = []
     for recipe in state.recipes:
         # Check if at least one user ingredient is in the recipe ingredients
-        if any(ingredient in recipe['ingredients'] for ingredient in ingredients):
-            matching_recipes.append(recipe['name'])  # Add only the recipe name
-    print(f"Matching recipes: {matching_recipes}")
+        if any(ingredient in [ing[0].lower() for ing in recipe['ingredients']] for ingredient in ingredients):
+            matching_recipes.append(recipe)  # Add the full recipe object
+    print(f"Matching recipes: {[recipe['name'] for recipe in matching_recipes]}")
     state.matched_recipes = matching_recipes  # Update the matched_recipes list
     return []  # Return an empty list to indicate task completion
 
-
-# Register the methods properly
 pyhop.declare_methods('find_recipes', method_find_recipes)
 
-
-# Function to display assumed ingredients
 def display_assumed_ingredients(common_ingredients):
     print("Assumed Ingredients:")
     for i, ingredient in enumerate(common_ingredients, 1):
@@ -99,31 +93,61 @@ def edit_assumed_ingredients(common_ingredients):
             print("Invalid choice. Please enter a number between 1 and 4.")
 
 
+# Function to display the list of recommended recipes
+def display_recipe_list(recipes):
+    print("\nRecommended Recipes:")
+    for i, recipe in enumerate(recipes, 1):
+        print(f"{i}. {recipe['name']}")
+
+
+# Function to allow the user to select a recipe
+def select_recipe(recipes):
+    while True:
+        try:
+            choice = int(input("Enter the number of the recipe you want to view (or 0 to exit): ").strip())
+            if choice == 0:
+                return None  # Exit
+            elif 1 <= choice <= len(recipes):
+                return recipes[choice - 1]  # Return the selected recipe
+            else:
+                print("Invalid choice. Please enter a number between 1 and", len(recipes))
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+
+
+# Function to display the full details of a recipe
+def display_recipe_details(recipe):
+    print("\nRecipe Details:")
+    print(f"Name: {recipe['name']}")
+    print(f"Category: {recipe['category']}")
+    print(f"Cuisine: {recipe['area']}")
+    print("\nIngredients:")
+    for ingredient, measurement in recipe['ingredients']:  # Directly iterate over the list of tuples
+        print(f"- {ingredient}: {measurement}")
+    print("\nInstructions:")
+    print(recipe['instructions'])
+
+
 # Main function to run the HTN planner
 def find_recipes(csv_file, user_ingredients, common_ingredients):
     # Combine user ingredients with assumed ingredients
     all_ingredients = user_ingredients + common_ingredients
 
-    # Load recipes from CSV
     recipes = load_recipes_from_csv(csv_file)
 
-    # Initialize the state
     state = State(recipes, all_ingredients)
 
-    # Run the HTN planner
     plan = pyhop.pyhop(state, [('find_recipes', all_ingredients)], verbose=3)
     
-    # Check if the plan was successful and return the result
-    if plan is not False:  # If the plan is not False, it succeeded
+    if plan is not False:
         print("Valid plan found")
-        return state.matched_recipes  # Return the matched recipes from the state
+        return state.matched_recipes
     else:
         print("No valid plan found")
         return []  # If no valid plan found, return an empty list
 
 
-# Example usage
-if __name__ == "__main__":
+def main():
     # List of common ingredients
     common_ingredients = [
         "salt", "white sugar", "butter", "egg", "white rice", "olive oil", "vegetable oil",
@@ -141,10 +165,17 @@ if __name__ == "__main__":
     # Find recipes
     recommended_recipes = find_recipes('recipes.csv', user_ingredients, common_ingredients)
     
-    # If there are any recommended recipes, print them
+    # If there are any recommended recipes, display them
     if recommended_recipes:
-        print("Recommended Recipes:")
-        for recipe_name in recommended_recipes:
-            print(f"- {recipe_name}")
+        display_recipe_list(recommended_recipes)
+        
+        # Allow the user to select a recipe
+        selected_recipe = select_recipe(recommended_recipes)
+        if selected_recipe:
+            display_recipe_details(selected_recipe)
     else:
         print("No recommended recipes found.")
+
+
+if __name__ == "__main__":
+    main()
