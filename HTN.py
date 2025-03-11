@@ -21,7 +21,6 @@ def load_recipes_from_csv(filename):
             recipes.append(recipe)
     return recipes
 
-# Define the state
 class State:
     def __init__(self, recipes, ingredients):
         self.recipes = recipes  # List of recipe objects
@@ -32,6 +31,7 @@ class State:
         return "State(recipes={}, ingredients={}, matched_recipes={})".format(
             len(self.recipes), self.ingredients, len(self.matched_recipes)
         )
+
 
 def method_find_recipes(state, ingredients):
     print(f"Running method_find_recipes with ingredients: {ingredients}")
@@ -44,8 +44,11 @@ def method_find_recipes(state, ingredients):
     state.matched_recipes = matching_recipes  # Update the matched_recipes list
     return []  # Return an empty list to indicate task completion
 
+
 pyhop.declare_methods('find_recipes', method_find_recipes)
 
+
+# Function to display assumed ingredients
 def display_assumed_ingredients(common_ingredients):
     print("Assumed Ingredients:")
     for i, ingredient in enumerate(common_ingredients, 1):
@@ -122,15 +125,13 @@ def display_recipe_details(recipe):
     print(f"Category: {recipe['category']}")
     print(f"Cuisine: {recipe['area']}")
     print("\nIngredients:")
-    for ingredient, measurement in recipe['ingredients']:  # Directly iterate over the list of tuples
+    for ingredient, measurement in recipe['ingredients']:
         print(f"- {ingredient}: {measurement}")
     print("\nInstructions:")
     print(recipe['instructions'])
 
 
-# Main function to run the HTN planner
 def find_recipes(csv_file, user_ingredients, common_ingredients):
-    # Combine user ingredients with assumed ingredients
     all_ingredients = user_ingredients + common_ingredients
 
     recipes = load_recipes_from_csv(csv_file)
@@ -148,7 +149,6 @@ def find_recipes(csv_file, user_ingredients, common_ingredients):
 
 
 def main():
-    # List of common ingredients
     common_ingredients = [
         "salt", "white sugar", "butter", "egg", "white rice", "olive oil", "vegetable oil",
     ]
@@ -162,17 +162,26 @@ def main():
     user_ingredients = input("Enter your ingredients (comma-separated): ").strip().lower().split(",")
     user_ingredients = [ingredient.strip() for ingredient in user_ingredients]
 
-    # Find recipes
     recommended_recipes = find_recipes('recipes.csv', user_ingredients, common_ingredients)
     
-    # If there are any recommended recipes, display them
     if recommended_recipes:
-        display_recipe_list(recommended_recipes)
-        
-        # Allow the user to select a recipe
-        selected_recipe = select_recipe(recommended_recipes)
-        if selected_recipe:
+        while True:
+            display_recipe_list(recommended_recipes)
+            
+            # Allow the user to select a recipe
+            selected_recipe = select_recipe(recommended_recipes)
+            if selected_recipe is None:
+                break  # Exit if the user chooses to exit
+
             display_recipe_details(selected_recipe)
+
+            # Ask the user if they want to go back to the list or exit
+            print("\nOptions:")
+            print("1. Go back to the list of recipes")
+            print("2. Exit")
+            choice = input("Choose an option (1-2): ").strip()
+            if choice == "2":
+                break  # Exit the loop and end the program
     else:
         print("No recommended recipes found.")
 
