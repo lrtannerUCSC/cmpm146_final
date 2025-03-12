@@ -34,7 +34,13 @@ class State:
 def method_find_recipes(state, ingredients):
     print(f"Running method_find_recipes with ingredients: {ingredients}")
     matching_recipes = []
+    added_recipe_ids = set()  # Track IDs of recipes already added to avoid duplicates
+    
     for recipe in state.recipes:
+        # Skip if recipe is already in the list
+        if recipe['id'] in added_recipe_ids:
+            continue
+        
         # Extract ingredient names from the recipe
         recipe_ingredients = [ing[0].lower() for ing in recipe['ingredients']]
         
@@ -49,6 +55,7 @@ def method_find_recipes(state, ingredients):
         # Check if at least one user ingredient is in the recipe ingredients
         if any(ingredient in recipe_ingredients for ingredient in ingredients):
             matching_recipes.append(recipe)  # Add the full recipe object
+            added_recipe_ids.add(recipe['id'])  # Track the recipe ID to avoid duplicates
     
     print(f"Matching recipes: {[recipe['name'] for recipe in matching_recipes]}")
     state.matched_recipes = matching_recipes  # Update the matched_recipes list
