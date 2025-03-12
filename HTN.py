@@ -21,25 +21,35 @@ def load_recipes_from_csv(filename):
             recipes.append(recipe)
     return recipes
 
-class State:
-    def __init__(self, recipes, ingredients):
-        self.recipes = recipes  # List of recipe objects
-        self.ingredients = ingredients
-        self.matched_recipes = []  # List of matched recipes
 
-    def __repr__(self):
-        return "State(recipes={}, ingredients={}, matched_recipes={})".format(
-            len(self.recipes), self.ingredients, len(self.matched_recipes)
-        )
+class State:
+    def __init__(self, recipes, ingredients, must_use=None, exclude=None):
+        self.recipes = recipes  # List of recipe objects
+        self.ingredients = ingredients  # User's available ingredients
+        self.must_use = must_use if must_use else []  # Must-use ingredients
+        self.exclude = exclude if exclude else []  # Exclude ingredients
+        self.matched_recipes = []  # List of matched recipes
 
 
 def method_find_recipes(state, ingredients):
     print(f"Running method_find_recipes with ingredients: {ingredients}")
     matching_recipes = []
     for recipe in state.recipes:
+        # Extract ingredient names from the recipe
+        recipe_ingredients = [ing[0].lower() for ing in recipe['ingredients']]
+        
+        # Check "must use" constraint
+        if state.must_use and not all(must_ingredient in recipe_ingredients for must_ingredient in state.must_use):
+            continue  # Skip if recipe doesn't include all "must use" ingredients
+        
+        # Check "exclude" constraint
+        if state.exclude and any(exclude_ingredient in recipe_ingredients for exclude_ingredient in state.exclude):
+            continue  # Skip if recipe contains any "exclude" ingredient
+        
         # Check if at least one user ingredient is in the recipe ingredients
-        if any(ingredient in [ing[0].lower() for ing in recipe['ingredients']] for ingredient in ingredients):
+        if any(ingredient in recipe_ingredients for ingredient in ingredients):
             matching_recipes.append(recipe)  # Add the full recipe object
+    
     print(f"Matching recipes: {[recipe['name'] for recipe in matching_recipes]}")
     state.matched_recipes = matching_recipes  # Update the matched_recipes list
     return []  # Return an empty list to indicate task completion
@@ -131,12 +141,12 @@ def display_recipe_details(recipe):
     print(recipe['instructions'])
 
 
-def find_recipes(csv_file, user_ingredients, common_ingredients):
+def find_recipes(csv_file, user_ingredients, common_ingredients, must_use=None, exclude=None):
     all_ingredients = user_ingredients + common_ingredients
 
     recipes = load_recipes_from_csv(csv_file)
 
-    state = State(recipes, all_ingredients)
+    state = State(recipes, all_ingredients, must_use, exclude)
 
     plan = pyhop.pyhop(state, [('find_recipes', all_ingredients)], verbose=3)
     
@@ -162,7 +172,15 @@ def main():
     user_ingredients = input("Enter your ingredients (comma-separated): ").strip().lower().split(",")
     user_ingredients = [ingredient.strip() for ingredient in user_ingredients]
 
-    recommended_recipes = find_recipes('recipes.csv', user_ingredients, common_ingredients)
+    # Get "must use" ingredients
+    must_use = input("Enter ingredients that MUST be used (comma-separated, leave blank if none): ").strip().lower().split(",")
+    must_use = [ingredient.strip() for ingredient in must_use if ingredient.strip()]
+
+    # Get "exclude" ingredients
+    exclude = input("Enter ingredients to EXCLUDE (comma-separated, leave blank if none): ").strip().lower().split(",")
+    exclude = [ingredient.strip() for ingredient in exclude if ingredient.strip()]
+
+    recommended_recipes = find_recipes('recipes.csv', user_ingredients, common_ingredients, must_use, exclude)
     
     if recommended_recipes:
         while True:
