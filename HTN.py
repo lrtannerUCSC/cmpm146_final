@@ -1,5 +1,18 @@
 import pyhop
 import csv
+import re
+
+
+# Helper function to extract numeric values from quantities
+def extract_numeric_value(quantity):
+    """
+    Extracts the numeric part of a quantity (e.g., '200g' -> 200, '1.5 cups' -> 1.5).
+    If no numeric value is found, returns 0.
+    """
+    match = re.search(r'\d+\.?\d*', quantity)
+    if match:
+        return float(match.group())
+    return 0  # Default to 0 if no numeric value is found
 
 
 # Load recipes from CSV
@@ -25,7 +38,7 @@ def load_recipes_from_csv(filename):
 class State:
     def __init__(self, recipes, ingredients, must_use=None, exclude=None):
         self.recipes = recipes  # List of recipe objects
-        self.ingredients = ingredients  # User's available ingredients
+        self.ingredients = ingredients  # User's available ingredients as a dictionary
         self.must_use = must_use if must_use else []  # Must-use ingredients
         self.exclude = exclude if exclude else []  # Exclude ingredients
         self.matched_recipes = []  # List of matched recipes
@@ -52,8 +65,22 @@ def method_find_recipes(state, ingredients):
         if state.exclude and any(exclude_ingredient in recipe_ingredients for exclude_ingredient in state.exclude):
             continue  # Skip if recipe contains any "exclude" ingredient
         
-        # Check if at least one user ingredient is in the recipe ingredients
-        if any(ingredient in recipe_ingredients for ingredient in ingredients):
+        # Check if the user has enough of each ingredient
+        has_enough_ingredients = True
+        for ingredient, recipe_quantity in recipe['ingredients']:
+            if ingredient.lower() in ingredients:
+                # Skip quantity check if the user has an infinite amount
+                if ingredients[ingredient.lower()] == 'infinite':
+                    continue
+                # Extract numeric values from quantities
+                user_quantity_numeric = extract_numeric_value(ingredients[ingredient.lower()])
+                recipe_quantity_numeric = extract_numeric_value(recipe_quantity)
+                # Compare numeric values
+                if user_quantity_numeric < recipe_quantity_numeric:
+                    has_enough_ingredients = False
+                    break
+        
+        if has_enough_ingredients:
             matching_recipes.append(recipe)  # Add the full recipe object
             added_recipe_ids.add(recipe['id'])  # Track the recipe ID to avoid duplicates
     
@@ -68,8 +95,8 @@ pyhop.declare_methods('find_recipes', method_find_recipes)
 # Function to display assumed ingredients
 def display_assumed_ingredients(common_ingredients):
     print("Assumed Ingredients:")
-    for i, ingredient in enumerate(common_ingredients, 1):
-        print(f"{i}. {ingredient}")
+    for i, (ingredient, quantity) in enumerate(common_ingredients.items(), 1):
+        print(f"{i}. {ingredient}: {quantity}")
 
 
 # Function to allow the user to edit the list of assumed ingredients
@@ -85,8 +112,11 @@ def edit_assumed_ingredients(common_ingredients):
         if choice == "1":
             # Add an ingredient
             new_ingredient = input("Enter the ingredient to add: ").strip().lower()
+            quantity = input("Enter the quantity (or leave blank for infinite): ").strip().lower()
+            if not quantity:
+                quantity = "infinite"
             if new_ingredient not in common_ingredients:
-                common_ingredients.append(new_ingredient)
+                common_ingredients[new_ingredient] = quantity
                 print(f"Added '{new_ingredient}' to the list.")
             else:
                 print(f"'{new_ingredient}' is already in the list.")
@@ -95,7 +125,7 @@ def edit_assumed_ingredients(common_ingredients):
             # Remove an ingredient
             ingredient_to_remove = input("Enter the ingredient to remove: ").strip().lower()
             if ingredient_to_remove in common_ingredients:
-                common_ingredients.remove(ingredient_to_remove)
+                del common_ingredients[ingredient_to_remove]
                 print(f"Removed '{ingredient_to_remove}' from the list.")
             else:
                 print(f"'{ingredient_to_remove}' is not in the list.")
@@ -148,9 +178,7 @@ def display_recipe_details(recipe):
     print(recipe['instructions'])
 
 
-def find_recipes(csv_file, user_ingredients, common_ingredients, must_use=None, exclude=None):
-    all_ingredients = user_ingredients + common_ingredients
-
+def find_recipes(csv_file, all_ingredients, must_use=None, exclude=None):
     recipes = load_recipes_from_csv(csv_file)
 
     state = State(recipes, all_ingredients, must_use, exclude)
@@ -166,9 +194,15 @@ def find_recipes(csv_file, user_ingredients, common_ingredients, must_use=None, 
 
 
 def main():
-    common_ingredients = [
-        "salt", "white sugar", "butter", "egg", "white rice", "olive oil", "vegetable oil",
-    ]
+    # Common ingredients as a dictionary (ingredient: quantity or 'infinite')
+    common_ingredients = {
+        "salt": "infinite",
+        "white sugar": "infinite",
+        "butter": "infinite",
+        "white rice": "infinite",
+        "olive oil": "infinite",
+        "vegetable oil": "infinite",
+    }
 
     # Allow the user to view and edit the assumed ingredients
     print("Welcome to the Recipe Finder!")
@@ -176,8 +210,18 @@ def main():
     edit_assumed_ingredients(common_ingredients)
 
     # Get user-specific ingredients
-    user_ingredients = input("Enter your ingredients (comma-separated): ").strip().lower().split(",")
-    user_ingredients = [ingredient.strip() for ingredient in user_ingredients]
+    user_ingredients = {}
+    ingredients_input = input("Enter your ingredients (e.g., 'flour - 200g, eggs'): ").strip().lower()
+    for item in ingredients_input.split(','):
+        if item.strip():
+            if '-' in item:
+                ingredient, quantity = item.strip().split('-')
+                user_ingredients[ingredient.strip()] = quantity.strip()
+            else:
+                user_ingredients[item.strip()] = 'infinite'  # Assume infinite if no quantity is specified
+
+    # Combine user_ingredients and common_ingredients (user_ingredients takes precedence)
+    all_ingredients = {**common_ingredients, **user_ingredients}
 
     # Get "must use" ingredients
     must_use = input("Enter ingredients that MUST be used (comma-separated, leave blank if none): ").strip().lower().split(",")
@@ -187,7 +231,7 @@ def main():
     exclude = input("Enter ingredients to EXCLUDE (comma-separated, leave blank if none): ").strip().lower().split(",")
     exclude = [ingredient.strip() for ingredient in exclude if ingredient.strip()]
 
-    recommended_recipes = find_recipes('recipes.csv', user_ingredients, common_ingredients, must_use, exclude)
+    recommended_recipes = find_recipes('recipes.csv', all_ingredients, must_use, exclude)
     
     if recommended_recipes:
         while True:
