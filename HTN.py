@@ -145,7 +145,7 @@ def display_recipe_list(recipes):
     print("\nRecommended Recipes:")
     # Define column widths
     name_width = 80
-    cuisine_width = 20
+    cuisine_width = 30
     category_width = 20
     
     # Print the header
@@ -210,6 +210,20 @@ def find_recipes(csv_file, all_ingredients, must_use=None, exclude=None):
         return []  # If no valid plan found, return an empty list
 
 
+# Function to get user-specific ingredients
+def get_user_ingredients():
+    user_ingredients = {}
+    ingredients_input = input("Enter your ingredients (e.g., 'flour - 200g, eggs'): ").strip().lower()
+    for item in ingredients_input.split(','):
+        if item.strip():
+            if '-' in item:
+                ingredient, quantity = item.strip().split('-')
+                user_ingredients[ingredient.strip()] = quantity.strip()
+            else:
+                user_ingredients[item.strip()] = 'infinite'  # Assume infinite if no quantity is specified
+    return user_ingredients
+
+
 def main():
     # Common ingredients as a dictionary (ingredient: quantity or 'infinite')
     common_ingredients = {
@@ -227,15 +241,7 @@ def main():
     edit_assumed_ingredients(common_ingredients)
 
     # Get user-specific ingredients
-    user_ingredients = {}
-    ingredients_input = input("Enter your ingredients (e.g., 'flour - 200g, eggs'): ").strip().lower()
-    for item in ingredients_input.split(','):
-        if item.strip():
-            if '-' in item:
-                ingredient, quantity = item.strip().split('-')
-                user_ingredients[ingredient.strip()] = quantity.strip()
-            else:
-                user_ingredients[item.strip()] = 'infinite'  # Assume infinite if no quantity is specified
+    user_ingredients = get_user_ingredients()
 
     # Combine user_ingredients and common_ingredients (user_ingredients takes precedence)
     all_ingredients = {**common_ingredients, **user_ingredients}
@@ -248,28 +254,73 @@ def main():
     exclude = input("Enter ingredients to EXCLUDE (comma-separated, leave blank if none): ").strip().lower().split(",")
     exclude = [ingredient.strip() for ingredient in exclude if ingredient.strip()]
 
-    recommended_recipes = find_recipes('recipes.csv', all_ingredients, must_use, exclude)
-    
-    if recommended_recipes:
-        while True:
-            display_recipe_list(recommended_recipes)
+    while True:
+        # Find and display recommended recipes
+        recommended_recipes = find_recipes('recipes.csv', all_ingredients, must_use, exclude)
+        
+        if recommended_recipes:
+            while True:
+                display_recipe_list(recommended_recipes)
+                
+                # Allow the user to select a recipe
+                selected_recipe = select_recipe(recommended_recipes)
+
+                if selected_recipe is None:
+                    break  # Exit if the user chooses to exit
+
+                display_recipe_details(selected_recipe)
+
+                # Ask the user if they want to go back to the list or exit
+                print("\nOptions:")
+                print("1. Go back to the list of recipes")
+                print("2. Update ingredients and re-run search")
+                print("3. Exit")
+                choice = input("Choose an option (1-3): ").strip()
+
+                if choice == "2":
+                    # Update ingredients and re-run search
+                    print("\nUpdating ingredients...")
+
+                    user_ingredients = get_user_ingredients()
+                    all_ingredients = {**common_ingredients, **user_ingredients}
+
+                    must_use = input("Enter ingredients that MUST be used (comma-separated, leave blank if none): ").strip().lower().split(",")
+                    must_use = [ingredient.strip() for ingredient in must_use if ingredient.strip()]
+
+                    exclude = input("Enter ingredients to EXCLUDE (comma-separated, leave blank if none): ").strip().lower().split(",")
+                    exclude = [ingredient.strip() for ingredient in exclude if ingredient.strip()]
+
+                    break  # Exit the inner loop and re-run the search
+
+                elif choice == "3":
+                    # Exit the program
+                    print("Goodbye!")
+                    return
+        else:
             
-            # Allow the user to select a recipe
-            selected_recipe = select_recipe(recommended_recipes)
-            if selected_recipe is None:
-                break  # Exit if the user chooses to exit
+            print("No recommended recipes found.")
 
-            display_recipe_details(selected_recipe)
-
-            # Ask the user if they want to go back to the list or exit
+            # Allow the user to update ingredients and re-run the search
             print("\nOptions:")
-            print("1. Go back to the list of recipes")
+            print("1. Update ingredients and re-run search")
             print("2. Exit")
             choice = input("Choose an option (1-2): ").strip()
-            if choice == "2":
-                break  # Exit the loop and end the program
-    else:
-        print("No recommended recipes found.")
+
+            if choice == "1":
+
+                print("\nUpdating ingredients...")
+
+                user_ingredients = get_user_ingredients()
+                all_ingredients = {**common_ingredients, **user_ingredients}
+
+                must_use = input("Enter ingredients that MUST be used (comma-separated, leave blank if none): ").strip().lower().split(",")
+                must_use = [ingredient.strip() for ingredient in must_use if ingredient.strip()]
+
+                exclude = input("Enter ingredients to EXCLUDE (comma-separated, leave blank if none): ").strip().lower().split(",")
+                exclude = [ingredient.strip() for ingredient in exclude if ingredient.strip()]
+            else:
+                print("Goodbye!")
+                return
 
 
 if __name__ == "__main__":
