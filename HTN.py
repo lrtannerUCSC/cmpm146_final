@@ -39,54 +39,52 @@ class State:
         self.must_use = must_use if must_use else []  # Must-use ingredients
         self.exclude = exclude if exclude else []  # Exclude ingredients
         self.matched_recipes = []  # List of matched recipes
+        self.meal_plan = []  # List of planned meals
+        self.used_recipes = set()  # Track used recipes to ensure variety
 
 
-def method_find_recipes(state, ingredients):
-    print(f"Running method_find_recipes with ingredients: {ingredients}")
-    matching_recipes = []
-    added_recipe_ids = set()  # Track IDs of recipes already added to avoid duplicates
-    
-    for recipe in state.recipes:
-        # Skip if recipe is already in the list
-        if recipe['id'] in added_recipe_ids:
-            continue
-        
-        # Extract ingredient names from the recipe
-        recipe_ingredients = [ing[0].lower() for ing in recipe['ingredients']]
-        
-        # Check "must use" constraint
-        if state.must_use and not all(must_ingredient in recipe_ingredients for must_ingredient in state.must_use):
-            continue  # Skip if recipe doesn't include all "must use" ingredients
-        
-        # Check "exclude" constraint
-        if state.exclude and any(exclude_ingredient in recipe_ingredients for exclude_ingredient in state.exclude):
-            continue  # Skip if recipe contains any "exclude" ingredient
-        
-        # Check if the user has enough of each ingredient
-        has_enough_ingredients = True
-        for ingredient, recipe_quantity in recipe['ingredients']:
-            if ingredient.lower() in ingredients:
-                # Skip quantity check if the user has an infinite amount
-                if ingredients[ingredient.lower()] == 'infinite':
-                    continue
-                # Extract numeric values from quantities
-                user_quantity_numeric = extract_numeric_value(ingredients[ingredient.lower()])
-                recipe_quantity_numeric = extract_numeric_value(recipe_quantity)
-                # Compare numeric values
-                if user_quantity_numeric < recipe_quantity_numeric:
-                    has_enough_ingredients = False
-                    break
-        
-        if has_enough_ingredients:
-            matching_recipes.append(recipe)  # Add the full recipe object
-            added_recipe_ids.add(recipe['id'])  # Track the recipe ID to avoid duplicates
-    
-    print(f"Matching recipes: {[recipe['name'] for recipe in matching_recipes]}")
-    state.matched_recipes = matching_recipes  # Update the matched_recipes list
-    return []  # Return an empty list to indicate task completion
+# HTN method to plan meals for a given number of days
+def method_plan_meals(state, meals_per_day, days, cuisines=None):
+    print(f"Planning {meals_per_day} meals per day for {days} days...")
+    for day in range(1, days + 1):
+        pyhop.pyhop(state, [('plan_day', day, meals_per_day, cuisines)], verbose=3)
+    return state.meal_plan
 
 
-pyhop.declare_methods('find_recipes', method_find_recipes)
+# HTN method to plan meals for a single day
+def method_plan_day(state, day, meals_per_day, cuisines=None):
+    print(f"\nPlanning Day {day}:")
+    for meal in range(1, meals_per_day + 1):
+        pyhop.pyhop(state, [('plan_meal', day, meal, cuisines)], verbose=3)
+    return []
+
+
+# HTN method to plan a single meal
+def method_plan_meal(state, day, meal, cuisines=None):
+    print(f"Planning Meal {meal} for Day {day}...")
+    # Filter recipes by cuisine if specified
+    if cuisines:
+        filtered_recipes = [recipe for recipe in state.matched_recipes if recipe['area'].lower() in cuisines]
+    else:
+        filtered_recipes = state.matched_recipes
+    if not filtered_recipes:
+        print("No recipes match the specified cuisines.")
+        return False
+    # Select a recipe that hasn't been used too often
+    for recipe in filtered_recipes:
+        if recipe['id'] not in state.used_recipes:
+            state.used_recipes.add(recipe['id'])
+            state.meal_plan.append((day, meal, recipe))
+            print(f"Selected: {recipe['name']} ({recipe['area']})")
+            return []
+    print("No unique recipes left for the specified constraints.")
+    return False
+
+
+# Declare HTN methods
+pyhop.declare_methods('plan_meals', method_plan_meals)
+pyhop.declare_methods('plan_day', method_plan_day)
+pyhop.declare_methods('plan_meal', method_plan_meal)
 
 
 # Function to display assumed ingredients
@@ -100,13 +98,13 @@ def display_assumed_ingredients(common_ingredients):
 def edit_assumed_ingredients(common_ingredients):
     while True:
         print("\nOptions:")
-        print("1. Add an ingredient")
-        print("2. Remove an ingredient")
-        print("3. View current list")
-        print("4. Done editing")
-        choice = input("Choose an option (1-4): ").strip()
+        print("A. Add an ingredient")
+        print("R. Remove an ingredient")
+        print("V. View current list")
+        print("D. Done editing")
+        choice = input("Choose an option (A/R/V/D): ").strip().lower()
 
-        if choice == "1":
+        if choice == "a":
             # Add an ingredient
             new_ingredient = input("Enter the ingredient to add: ").strip().lower()
             quantity = input("Enter the quantity (or leave blank for infinite): ").strip().lower()
@@ -118,7 +116,7 @@ def edit_assumed_ingredients(common_ingredients):
             else:
                 print(f"'{new_ingredient}' is already in the list.")
 
-        elif choice == "2":
+        elif choice == "r":
             # Remove an ingredient
             ingredient_to_remove = input("Enter the ingredient to remove: ").strip().lower()
             if ingredient_to_remove in common_ingredients:
@@ -127,17 +125,17 @@ def edit_assumed_ingredients(common_ingredients):
             else:
                 print(f"'{ingredient_to_remove}' is not in the list.")
 
-        elif choice == "3":
+        elif choice == "v":
             # View current list
             display_assumed_ingredients(common_ingredients)
 
-        elif choice == "4":
+        elif choice == "d":
             # Exit editing
             print("Finished editing the list.")
             break
 
         else:
-            print("Invalid choice. Please enter a number between 1 and 4.")
+            print("Invalid choice. Please enter A, R, V, or D.")
 
 
 # Function to display the list of recommended recipes
@@ -195,19 +193,40 @@ def display_recipe_details(recipe):
     print(recipe['instructions'])
 
 
-def find_recipes(csv_file, all_ingredients, must_use=None, exclude=None):
-    recipes = load_recipes_from_csv(csv_file)
-
-    state = State(recipes, all_ingredients, must_use, exclude)
-
-    plan = pyhop.pyhop(state, [('find_recipes', all_ingredients)], verbose=3)
+# Function to filter recipes based on user constraints
+def find_recipes(recipes, all_ingredients, must_use=None, exclude=None):
+    matching_recipes = []
+    for recipe in recipes:
+        # Extract ingredient names from the recipe
+        recipe_ingredients = [ing[0].lower() for ing in recipe['ingredients']]
+        
+        # Check "must use" constraint
+        if must_use and not all(must_ingredient in recipe_ingredients for must_ingredient in must_use):
+            continue  # Skip if recipe doesn't include all "must use" ingredients
+        
+        # Check "exclude" constraint
+        if exclude and any(exclude_ingredient in recipe_ingredients for exclude_ingredient in exclude):
+            continue  # Skip if recipe contains any "exclude" ingredient
+        
+        # Check if the user has enough of each ingredient
+        has_enough_ingredients = True
+        for ingredient, recipe_quantity in recipe['ingredients']:
+            if ingredient.lower() in all_ingredients:
+                # Skip quantity check if the user has an infinite amount
+                if all_ingredients[ingredient.lower()] == 'infinite':
+                    continue
+                # Extract numeric values from quantities
+                user_quantity_numeric = extract_numeric_value(all_ingredients[ingredient.lower()])
+                recipe_quantity_numeric = extract_numeric_value(recipe_quantity)
+                # Compare numeric values
+                if user_quantity_numeric < recipe_quantity_numeric:
+                    has_enough_ingredients = False
+                    break
+        
+        if has_enough_ingredients:
+            matching_recipes.append(recipe)  # Add the full recipe object
     
-    if plan is not False:
-        print("Valid plan found")
-        return state.matched_recipes
-    else:
-        print("No valid plan found")
-        return []  # If no valid plan found, return an empty list
+    return matching_recipes
 
 
 # Function to get user-specific ingredients
@@ -222,6 +241,13 @@ def get_user_ingredients():
             else:
                 user_ingredients[item.strip()] = 'infinite'  # Assume infinite if no quantity is specified
     return user_ingredients
+
+
+# Function to display the meal plan
+def display_meal_plan(meal_plan):
+    print("\nMeal Plan:")
+    for day, meal, recipe in meal_plan:
+        print(f"Day {day}, Meal {meal}: {recipe['name']} ({recipe['area']})")
 
 
 def main():
@@ -255,67 +281,72 @@ def main():
     exclude = [ingredient.strip() for ingredient in exclude if ingredient.strip()]
 
     while True:
-        # Find and display recommended recipes
-        recommended_recipes = find_recipes('recipes.csv', all_ingredients, must_use, exclude)
+        # Load recipes and filter based on user constraints
+        recipes = load_recipes_from_csv('recipes.csv')
+        matched_recipes = find_recipes(recipes, all_ingredients, must_use, exclude)
         
-        if recommended_recipes:
+        if matched_recipes:
+            # Display the recipe list after updating ingredients
+            display_recipe_list(matched_recipes)
+            
             while True:
-                display_recipe_list(recommended_recipes)
-                
-                # Allow the user to select a recipe
-                selected_recipe = select_recipe(recommended_recipes)
-
-                if selected_recipe is None:
-                    break  # Exit if the user chooses to exit
-
-                display_recipe_details(selected_recipe)
-
-                # Ask the user if they want to go back to the list or exit
+                # Display basic options
                 print("\nOptions:")
-                print("1. Go back to the list of recipes")
-                print("2. Update ingredients and re-run search")
-                print("3. Exit")
-                choice = input("Choose an option (1-3): ").strip()
+                print("V. View a recipe")
+                print("U. Update ingredients and re-run search")
+                print("P. Plan meals")
+                print("E. Exit")
+                choice = input("Choose an option (V/U/P/E): ").strip().lower()
 
-                if choice == "2":
+                if choice == "v":
+                    # Allow the user to select a recipe
+                    selected_recipe = select_recipe(matched_recipes)
+                    if selected_recipe is not None:
+                        display_recipe_details(selected_recipe)
+                elif choice == "u":
                     # Update ingredients and re-run search
                     print("\nUpdating ingredients...")
-
                     user_ingredients = get_user_ingredients()
                     all_ingredients = {**common_ingredients, **user_ingredients}
-
                     must_use = input("Enter ingredients that MUST be used (comma-separated, leave blank if none): ").strip().lower().split(",")
                     must_use = [ingredient.strip() for ingredient in must_use if ingredient.strip()]
-
                     exclude = input("Enter ingredients to EXCLUDE (comma-separated, leave blank if none): ").strip().lower().split(",")
                     exclude = [ingredient.strip() for ingredient in exclude if ingredient.strip()]
-
                     break  # Exit the inner loop and re-run the search
+                elif choice == "p":
+                    # Plan meals
+                    meals_per_day = int(input("Enter the number of meals per day: ").strip())
+                    days = int(input("Enter the number of days: ").strip())
+                    cuisines = input("Enter cuisines to include (comma-separated, leave blank for any): ").strip().lower().split(",")
+                    cuisines = [cuisine.strip() for cuisine in cuisines if cuisine.strip()]
 
-                elif choice == "3":
+                    # Create a state for HTN planning
+                    state = State(matched_recipes, all_ingredients, must_use, exclude)
+                    meal_plan = pyhop.pyhop(state, [('plan_meals', meals_per_day, days, cuisines)], verbose=3)
+
+                    if meal_plan is not False:
+                        display_meal_plan(meal_plan)
+                    else:
+                        print("No valid meal plan found.")
+                elif choice == "e":
                     # Exit the program
                     print("Goodbye!")
                     return
+                else:
+                    print("Invalid choice. Please enter V, U, P, or E.")
         else:
-            
             print("No recommended recipes found.")
-
             # Allow the user to update ingredients and re-run the search
             print("\nOptions:")
-            print("1. Update ingredients and re-run search")
-            print("2. Exit")
-            choice = input("Choose an option (1-2): ").strip()
-
-            if choice == "1":
-
+            print("U. Update ingredients and re-run search")
+            print("E. Exit")
+            choice = input("Choose an option (U/E): ").strip().lower()
+            if choice == "u":
                 print("\nUpdating ingredients...")
-
                 user_ingredients = get_user_ingredients()
                 all_ingredients = {**common_ingredients, **user_ingredients}
-
                 must_use = input("Enter ingredients that MUST be used (comma-separated, leave blank if none): ").strip().lower().split(",")
                 must_use = [ingredient.strip() for ingredient in must_use if ingredient.strip()]
-
                 exclude = input("Enter ingredients to EXCLUDE (comma-separated, leave blank if none): ").strip().lower().split(",")
                 exclude = [ingredient.strip() for ingredient in exclude if ingredient.strip()]
             else:
