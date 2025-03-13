@@ -5,10 +5,7 @@ import re
 
 # Helper function to extract numeric values from quantities
 def extract_numeric_value(quantity):
-    """
-    Extracts the numeric part of a quantity (e.g., '200g' -> 200, '1.5 cups' -> 1.5).
-    If no numeric value is found, returns 0.
-    """
+    # Takes the 200 out of flour - 200g, for comparing amounts
     match = re.search(r'\d+\.?\d*', quantity)
     if match:
         return float(match.group())
@@ -146,8 +143,28 @@ def edit_assumed_ingredients(common_ingredients):
 # Function to display the list of recommended recipes
 def display_recipe_list(recipes):
     print("\nRecommended Recipes:")
+    # Define column widths
+    name_width = 80
+    cuisine_width = 20
+    category_width = 20
+    
+    # Print the header
+    print(
+        f"{'#'.ljust(5)}"
+        f"{'Recipe Name'.ljust(name_width)}"
+        f"{'Cuisine'.ljust(cuisine_width)}"
+        f"{'Category'.ljust(category_width)}"
+    )
+    print("-" * (5 + name_width + cuisine_width + category_width))
+    
+    # Print each recipe in a formatted row
     for i, recipe in enumerate(recipes, 1):
-        print(f"{i}. {recipe['name']}")
+        print(
+            f"{str(i).ljust(5)}"
+            f"{recipe['name'].ljust(name_width)}"
+            f"{recipe['area'].ljust(cuisine_width)}"
+            f"{recipe['category'].ljust(category_width)}"
+        )
 
 
 # Function to allow the user to select a recipe
