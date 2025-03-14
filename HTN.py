@@ -48,7 +48,8 @@ def method_plan_meals(state, meals_per_day, days, cuisines=None):
     print(f"Planning {meals_per_day} meals per day for {days} days...")
     for day in range(1, days + 1):
         pyhop.pyhop(state, [('plan_day', day, meals_per_day, cuisines)], verbose=3)
-    return state.meal_plan
+    display_meal_plan(state.meal_plan)
+    return []
 
 
 # HTN method to plan meals for a single day
@@ -321,11 +322,12 @@ def main():
                     cuisines = [cuisine.strip() for cuisine in cuisines if cuisine.strip()]
 
                     # Create a state for HTN planning
-                    state = State(matched_recipes, all_ingredients, must_use, exclude)
-                    meal_plan = pyhop.pyhop(state, [('plan_meals', meals_per_day, days, cuisines)], verbose=3)
+                    state = State(recipes, all_ingredients, must_use, exclude)
+                    state.matched_recipes = matched_recipes  # Assign matched_recipes to state.matched_recipes
+                    meal_plan_found = pyhop.pyhop(state, [('plan_meals', meals_per_day, days, cuisines)], verbose=3)
 
-                    if meal_plan is not False:
-                        display_meal_plan(meal_plan)
+                    if meal_plan_found is not False:
+                        display_meal_plan(state.meal_plan)
                     else:
                         print("No valid meal plan found.")
                 elif choice == "e":
