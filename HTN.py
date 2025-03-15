@@ -229,35 +229,41 @@ def display_recipe_details(recipe):
 # Function to filter recipes based on user constraints
 def find_recipes(recipes, all_ingredients, must_use=None, exclude=None):
     matching_recipes = []
+    unique_recipe_ids = set()  # Track unique recipe IDs to avoid duplicates
+    
     for recipe in recipes:
+        # Skip if recipe ID has already been added
+        if recipe['id'] in unique_recipe_ids:
+            continue
+            
         # Extract ingredient names from the recipe
         recipe_ingredients = [ing[0].lower() for ing in recipe['ingredients']]
         
         # Check "must use" constraint
         if must_use and not all(must_ingredient in recipe_ingredients for must_ingredient in must_use):
-            continue  # Skip if recipe doesn't include all "must use" ingredients
+            continue
         
         # Check "exclude" constraint
         if exclude and any(exclude_ingredient in recipe_ingredients for exclude_ingredient in exclude):
-            continue  # Skip if recipe contains any "exclude" ingredient
+            continue
         
-        # Check if the user has enough of each ingredient
+        # Check ingredient availability and quantities
         has_enough_ingredients = True
         for ingredient, recipe_quantity in recipe['ingredients']:
-            if ingredient.lower() in all_ingredients:
-                # Skip quantity check if the user has an infinite amount
-                if all_ingredients[ingredient.lower()] == 'infinite':
-                    continue
-                # Extract numeric values from quantities
-                user_quantity_numeric = extract_numeric_value(all_ingredients[ingredient.lower()])
-                recipe_quantity_numeric = extract_numeric_value(recipe_quantity)
-                # Compare numeric values
-                if user_quantity_numeric < recipe_quantity_numeric:
+            ingredient_lower = ingredient.lower()
+            if ingredient_lower not in all_ingredients:
+                has_enough_ingredients = False
+                break
+            if all_ingredients[ingredient_lower] != 'infinite':
+                user_qty = extract_numeric_value(all_ingredients[ingredient_lower])
+                recipe_qty = extract_numeric_value(recipe_quantity)
+                if user_qty < recipe_qty:
                     has_enough_ingredients = False
                     break
         
         if has_enough_ingredients:
-            matching_recipes.append(recipe)  # Add the full recipe object
+            matching_recipes.append(recipe)
+            unique_recipe_ids.add(recipe['id'])
     
     return matching_recipes
 
@@ -320,7 +326,7 @@ def main():
         
         if matched_recipes:
             # Display the recipe list after updating ingredients
-            display_recipe_list(matched_recipes)
+            display_recipe_list_console(matched_recipes)
             
             while True:
                 # Display basic options
