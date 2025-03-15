@@ -140,7 +140,7 @@ def edit_assumed_ingredients(common_ingredients):
 
 
 # Function to display the list of recommended recipes
-def display_recipe_list(recipes):
+def display_recipe_list_console(recipes):
     print("\nRecommended Recipes:")
     # Define column widths
     name_width = 80
@@ -165,6 +165,38 @@ def display_recipe_list(recipes):
             f"{recipe['category'].ljust(category_width)}"
         )
 
+# def display_recipe_list(recipes):
+#     # Define column widths
+#     name_width = 50
+#     cuisine_width = 30
+#     category_width = 20
+    
+#     # Create the header
+#     recipe_list = (
+#         f"{'Recipe'.ljust(name_width)}"
+#         # f"{'Cuisine'.ljust(cuisine_width)}"
+#         # f"{'Category'.ljust(category_width)}\n"
+#     )
+#     recipe_list += "-" * (5 + name_width + cuisine_width + category_width) + "\n"
+#     recipe_list += "-" * (5 + name_width) + "\n"
+    
+#     # Add each recipe to the formatted string
+#     for i, recipe in enumerate(recipes, 1):
+#         recipe_list += (
+#             f"{str(i).ljust(5)}"
+#             f"{recipe['name'].ljust(name_width)}"
+#             f"{recipe['area'].ljust(cuisine_width)}"
+#             f"{recipe['category'].ljust(category_width)}\n"
+#         )
+    
+#     return recipe_list
+
+def display_recipe_list(recipes):
+    # Create a formatted string with recipe names
+    recipe_list = ""
+    for i, recipe in enumerate(recipes, 1):
+        recipe_list += f"{i}. {recipe['name']}\n"  # Add recipe name with numbering
+    return recipe_list
 
 # Function to allow the user to select a recipe
 def select_recipe(recipes):
