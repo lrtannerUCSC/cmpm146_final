@@ -1,7 +1,6 @@
 import tkinter as tk
-from PIL import Image, ImageTk  # Import Image and ImageTk from PIL
+from PIL import Image, ImageTk
 from HTN import load_recipes_from_csv, display_recipe_list, display_recipe_list_console, find_recipes, State, pyhop, display_meal_plan, common_ingredients
-
 
 off_white = '#fbffe4'
 light_green = '#3d8d7a'
@@ -32,6 +31,7 @@ def create_rounded_rectangle(canvas, x1, y1, x2, y2, radius=25, **kwargs):
 
 ingredients_text = []
 recipes = load_recipes_from_csv('recipes.csv')
+
 def main():
     root = tk.Tk()
     root.title("Fridge Friend")
@@ -151,13 +151,13 @@ def main():
         bg=off_white, 
         fg=dark_green, 
         height=10, 
-        width=30
+        width=30,
     )
     ingredients_text_widget.place(
         x=(canvas_width - 450) / 2 + 20, 
         y=(canvas_height - body_height) / 2 - body_vertical_offset + title_height - 80, 
         width=410, 
-        height=200
+        height=320
     )
     ingredients_text = "\n".join([f"{ingredient[0]} {ingredient[1] if ingredient[1] != 'infinite' else ''}" for ingredient in common_ingredients.items()])
     ingredients_text_widget.insert(tk.END, ingredients_text)
@@ -165,7 +165,7 @@ def main():
     # Must Include Text Box
     canvas.create_text(
         (canvas_width - 450) / 2 + 20, 
-        (canvas_height - body_height) / 2 - body_vertical_offset + title_height + 140, 
+        (canvas_height - body_height) / 2 - body_vertical_offset + title_height + 270, 
         text="Must Include", 
         anchor='w', 
         fill=off_white, 
@@ -182,7 +182,7 @@ def main():
     )
     must_include_text_widget.place(
         x=(canvas_width - 450) / 2 + 20, 
-        y=(canvas_height - body_height) / 2 - body_vertical_offset + title_height + 170, 
+        y=(canvas_height - body_height) / 2 - body_vertical_offset + title_height + 300, 
         width=410, 
         height=60
     )
@@ -190,7 +190,7 @@ def main():
     # Must Exclude Text Box
     canvas.create_text(
         (canvas_width - 450) / 2 + 20, 
-        (canvas_height - body_height) / 2 - body_vertical_offset + title_height + 240, 
+        (canvas_height - body_height) / 2 - body_vertical_offset + title_height + 380, 
         text="Must Exclude", 
         anchor='w', 
         fill=off_white, 
@@ -207,10 +207,47 @@ def main():
     )
     must_exclude_text_widget.place(
         x=(canvas_width - 450) / 2 + 20, 
-        y=(canvas_height - body_height) / 2 - body_vertical_offset + title_height + 270, 
+        y=(canvas_height - body_height) / 2 - body_vertical_offset + title_height + 410, 
         width=410, 
         height=60
     )
+
+    # Add and Remove Buttons
+    button_spread = 114  # Horizontal spacing between buttons
+    button_width = 12    # Width of the buttons
+    button_vertical_offset = 110  # Vertical offset from the bottom of the frame
+
+    # Add Button
+    add_button = tk.Button(
+        frames[1], 
+        text="Add", 
+        bg=light_green, 
+        fg=off_white, 
+        font=('Helvetica', 20), 
+        width=button_width
+    )
+    canvas.create_window(
+        canvas_width / 2 - button_spread, 
+        (canvas_height + 450) / 2 + button_vertical_offset, 
+        window=add_button
+    )
+    add_button.config(command=lambda: open_popup("add", ingredients_text_widget))
+
+    # Remove Button
+    remove_button = tk.Button(
+        frames[1], 
+        text="Remove", 
+        bg=light_green, 
+        fg=off_white, 
+        font=('Helvetica', 20), 
+        width=button_width
+    )
+    canvas.create_window(
+        canvas_width / 2 + button_spread, 
+        (canvas_height + 450) / 2 + button_vertical_offset, 
+        window=remove_button
+    )
+    remove_button.config(command=lambda: open_popup("remove", ingredients_text_widget))
 
     ######################
     # Center Right Frame #
@@ -410,6 +447,61 @@ def main():
 
 def upload_button():
     print("Upload Button Pressed")
+
+def open_popup(action, ingredients_text_widget):
+    # Create a new popup window
+    popup = tk.Toplevel()
+    popup.title(f"{action.capitalize()} Ingredient")
+    popup.geometry("400x200")
+    popup.configure(bg=off_white)
+
+    # Add a label
+    label = tk.Label(popup, text=f"Enter ingredient to {action}:", bg=off_white, fg=dark_green, font=('Helvetica', 14))
+    label.pack(pady=10)
+
+    # Add a text widget for user input
+    input_text = tk.Text(popup, font=('Helvetica', 14), wrap=tk.WORD, bg=off_white, fg=dark_green, height=3, width=30)
+    input_text.pack(pady=10)
+
+    # Add a submit button
+    submit_button = tk.Button(
+        popup, 
+        text="Submit", 
+        bg=light_green, 
+        fg=off_white, 
+        font=('Helvetica', 14), 
+        command=lambda: handle_popup_submit(action, input_text, popup, ingredients_text_widget)
+    )
+    submit_button.pack(pady=10)
+
+def handle_popup_submit(action, input_text, popup, ingredients_text_widget):
+    # Retrieve the user input
+    user_input = input_text.get("1.0", tk.END).strip()
+    items = [item.strip() for item in user_input.split(',') if item.strip()]  # Split and strip whitespace
+    
+    if items:  # Check if there are any items to process
+        if action == "add":
+            # Add each ingredient to common_ingredients
+            for item in items:
+                common_ingredients[item] = "infinite"  # Default to infinite quantity
+        elif action == "remove":
+            # Remove each ingredient from common_ingredients
+            for item in items:
+                if item in common_ingredients:
+                    del common_ingredients[item]
+        
+        # Refresh the ingredients_text_widget
+        refresh_ingredients_text_widget(ingredients_text_widget)
+    
+    # Close the popup
+    popup.destroy()
+
+def refresh_ingredients_text_widget(ingredients_text_widget):
+    # Clear the current content
+    ingredients_text_widget.delete("1.0", tk.END)
+    # Add the updated ingredients list
+    ingredients_text = "\n".join([f"{ingredient} - {quantity}" if quantity != "infinite" else f"{ingredient}" for ingredient, quantity in common_ingredients.items()])
+    ingredients_text_widget.insert(tk.END, ingredients_text)
 
 def find_button(recipes, recipes_text_widget, must_include_text_widget, must_exclude_text_widget):
     print("Find Button Pressed")

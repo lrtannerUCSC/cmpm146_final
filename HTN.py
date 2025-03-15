@@ -335,11 +335,12 @@ def display_meal_plan(meal_plan):
 # Common ingredients as a dictionary (ingredient: quantity or 'infinite')
 common_ingredients = {
     "salt": "infinite",
-    "white sugar": "infinite",
+    "sugar": "infinite",
     "butter": "infinite",
-    "white rice": "infinite",
+    "rice": "infinite",
     "olive oil": "infinite",
     "vegetable oil": "infinite",
+    "oil": "infinite",
 }
 
 def main():
