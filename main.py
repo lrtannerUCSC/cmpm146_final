@@ -1,7 +1,7 @@
 import tkinter as tk
 from PIL import Image, ImageTk  # Import Image and ImageTk from PIL
-from HTN import load_recipes_from_csv, display_recipe_list, find_recipes, State, pyhop, display_meal_plan
-import math
+from HTN import load_recipes_from_csv, display_recipe_list, display_recipe_list_console, find_recipes, State, pyhop, display_meal_plan, common_ingredients
+
 
 off_white = '#fbffe4'
 light_green = '#3d8d7a'
@@ -30,9 +30,11 @@ def create_rounded_rectangle(canvas, x1, y1, x2, y2, radius=25, **kwargs):
               x1, y1]
     return canvas.create_polygon(points, **kwargs, smooth=True)
 
+ingredients_text = []
+recipes = load_recipes_from_csv('recipes.csv')
 def main():
     root = tk.Tk()
-    root.title("Simple Tkinter Window")
+    root.title("Fridge Friend")
     root.geometry("1920x1080")
     root.configure(bg=off_white)
 
@@ -50,7 +52,6 @@ def main():
     canvas.create_text(230, 69, text="Fridge Friend", fill=off_white, font=('Helvetica', 50))
     canvas.create_text(1820, 110, text="V0.01 Demo", fill=off_white, font=('Helvetica', 20))
 
-
     ###############
     # Frame Setup #
     ###############
@@ -59,7 +60,7 @@ def main():
 
     frames = []
     for i in range(4):
-        frame = tk.Frame(root, bg='blue')
+        frame = tk.Frame(root, bg=off_white)
         frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         frames.append(frame)
 
@@ -134,25 +135,82 @@ def main():
     )
 
     # Title Text
-    canvas.create_text(canvas_width / 2, (canvas_height - body_height) / 2 - body_vertical_offset + title_height / 2 - 55, text="Ingredients", fill=off_white, font=('Helvetica', 30))
+    canvas.create_text(
+        canvas_width / 2, 
+        (canvas_height - body_height) / 2 - body_vertical_offset + title_height / 2 - 55, 
+        text="Ingredients", 
+        fill=off_white, 
+        font=('Helvetica', 30)
+    )
 
-    # Body Text
-    ingredients = []
-    ingredients_text = "Ingredients not implemented yet"
-    canvas.create_text((canvas_width - 450) / 2 + 20, (canvas_height - body_height) / 2 - body_vertical_offset + title_height - 80, text=ingredients_text, anchor='w', fill=off_white, font=('Helvetica', 20))
-    
-    # Buttons
-    button_spread = 114
-    button_width = 12
-    button_vertical_offset = 110
+    # Ingredients Text Box
+    ingredients_text_widget = tk.Text(
+        frames[1], 
+        font=('Helvetica', 14), 
+        wrap=tk.WORD, 
+        bg=off_white, 
+        fg=dark_green, 
+        height=10, 
+        width=30
+    )
+    ingredients_text_widget.place(
+        x=(canvas_width - 450) / 2 + 20, 
+        y=(canvas_height - body_height) / 2 - body_vertical_offset + title_height - 80, 
+        width=410, 
+        height=200
+    )
+    ingredients_text = "\n".join([f"{ingredient[0]} {ingredient[1] if ingredient[1] != 'infinite' else ''}" for ingredient in common_ingredients.items()])
+    ingredients_text_widget.insert(tk.END, ingredients_text)
 
-    button = tk.Button(frames[1], text="Add", bg=light_green, fg=off_white, font=('Helvetica', 20), width=button_width)
-    button_add = canvas.create_window(canvas_width / 2 - button_spread, (canvas_height + 450) / 2 + button_vertical_offset, window=button)
-    button.config(command=add_button)
+    # Must Include Text Box
+    canvas.create_text(
+        (canvas_width - 450) / 2 + 20, 
+        (canvas_height - body_height) / 2 - body_vertical_offset + title_height + 140, 
+        text="Must Include", 
+        anchor='w', 
+        fill=off_white, 
+        font=('Helvetica', 20)
+    )
+    must_include_text_widget = tk.Text(
+        frames[1], 
+        font=('Helvetica', 14), 
+        wrap=tk.WORD, 
+        bg=off_white, 
+        fg=dark_green, 
+        height=3, 
+        width=30
+    )
+    must_include_text_widget.place(
+        x=(canvas_width - 450) / 2 + 20, 
+        y=(canvas_height - body_height) / 2 - body_vertical_offset + title_height + 170, 
+        width=410, 
+        height=60
+    )
 
-    button = tk.Button(frames[1], text="Remove", bg=light_green, fg=off_white, font=('Helvetica', 20), width=button_width)
-    button_remove = canvas.create_window(canvas_width / 2 + button_spread, (canvas_height + 450) / 2 + button_vertical_offset, window=button)
-    button.config(command=remove_button)
+    # Must Exclude Text Box
+    canvas.create_text(
+        (canvas_width - 450) / 2 + 20, 
+        (canvas_height - body_height) / 2 - body_vertical_offset + title_height + 240, 
+        text="Must Exclude", 
+        anchor='w', 
+        fill=off_white, 
+        font=('Helvetica', 20)
+    )
+    must_exclude_text_widget = tk.Text(
+        frames[1], 
+        font=('Helvetica', 14), 
+        wrap=tk.WORD, 
+        bg=off_white, 
+        fg=dark_green, 
+        height=3, 
+        width=30
+    )
+    must_exclude_text_widget.place(
+        x=(canvas_width - 450) / 2 + 20, 
+        y=(canvas_height - body_height) / 2 - body_vertical_offset + title_height + 270, 
+        width=410, 
+        height=60
+    )
 
     ######################
     # Center Right Frame #
@@ -191,24 +249,78 @@ def main():
     )
 
     # Title Text
-    canvas.create_text(canvas_width / 2, (canvas_height - body_height) / 2 - body_vertical_offset + title_height / 2 - 55, text="Meal Plan Settings", fill=off_white, font=('Helvetica', 30))
+    canvas.create_text(
+        canvas_width / 2, 
+        (canvas_height - body_height) / 2 - body_vertical_offset + title_height / 2 - 55, 
+        text="Meal Plan Settings", 
+        fill=off_white, 
+        font=('Helvetica', 30)
+    )
 
     # Body Text and Input
-    canvas.create_text((canvas_width - 450) / 2 + 20, (canvas_height - body_height) / 2 - body_vertical_offset + title_height - 80, text="Meals per day", anchor='w', fill=off_white, font=('Helvetica', 20))
+    canvas.create_text(
+        (canvas_width - 450) / 2 + 20, 
+        (canvas_height - body_height) / 2 - body_vertical_offset + title_height - 80, 
+        text="Meals per day", 
+        anchor='w', 
+        fill=off_white, 
+        font=('Helvetica', 20)
+    )
     entry_meals_per_day = tk.Entry(frames[2], font=('Helvetica', 20), width=27, bg=off_white)
-    entry_meals_per_day_window = canvas.create_window((canvas_width - 450) / 2 + 20, (canvas_height - body_height) / 2 - body_vertical_offset + title_height - 40, anchor='w', window=entry_meals_per_day)
+    entry_meals_per_day_window = canvas.create_window(
+        (canvas_width - 450) / 2 + 20, 
+        (canvas_height - body_height) / 2 - body_vertical_offset + title_height - 40, 
+        anchor='w', 
+        window=entry_meals_per_day
+    )
 
-    canvas.create_text((canvas_width - 450) / 2 + 20, (canvas_height - body_height) / 2 - body_vertical_offset + title_height, text="Number of days", anchor='w', fill=off_white, font=('Helvetica', 20))
+    canvas.create_text(
+        (canvas_width - 450) / 2 + 20, 
+        (canvas_height - body_height) / 2 - body_vertical_offset + title_height, 
+        text="Number of days", 
+        anchor='w', 
+        fill=off_white, 
+        font=('Helvetica', 20)
+    )
     entry_number_of_days = tk.Entry(frames[2], font=('Helvetica', 20), width=27, bg=off_white)
-    entry_number_of_days_window = canvas.create_window((canvas_width - 450) / 2 + 20, (canvas_height - body_height) / 2 - body_vertical_offset + title_height + 40, anchor='w', window=entry_number_of_days)
+    entry_number_of_days_window = canvas.create_window(
+        (canvas_width - 450) / 2 + 20, 
+        (canvas_height - body_height) / 2 - body_vertical_offset + title_height + 40, 
+        anchor='w', 
+        window=entry_number_of_days
+    )
 
-    canvas.create_text((canvas_width - 450) / 2 + 20, (canvas_height - body_height) / 2 - body_vertical_offset + title_height + 80, text="Cuisine preference", anchor='w', fill=off_white, font=('Helvetica', 20))
+    canvas.create_text(
+        (canvas_width - 450) / 2 + 20, 
+        (canvas_height - body_height) / 2 - body_vertical_offset + title_height + 80, 
+        text="Cuisine preference", 
+        anchor='w', 
+        fill=off_white, 
+        font=('Helvetica', 20)
+    )
     entry_cuisine_preference = tk.Entry(frames[2], font=('Helvetica', 20), width=27, bg=off_white)
-    entry_cuisine_preference_window = canvas.create_window((canvas_width - 450) / 2 + 20, (canvas_height - body_height) / 2 - body_vertical_offset + title_height + 120, anchor='w', window=entry_cuisine_preference)
+    entry_cuisine_preference_window = canvas.create_window(
+        (canvas_width - 450) / 2 + 20, 
+        (canvas_height - body_height) / 2 - body_vertical_offset + title_height + 120, 
+        anchor='w', 
+        window=entry_cuisine_preference
+    )
 
-    canvas.create_text((canvas_width - 450) / 2 + 20, (canvas_height - body_height) / 2 - body_vertical_offset + title_height + 160, text="Categories", anchor='w', fill=off_white, font=('Helvetica', 20))
+    canvas.create_text(
+        (canvas_width - 450) / 2 + 20, 
+        (canvas_height - body_height) / 2 - body_vertical_offset + title_height + 160, 
+        text="Categories", 
+        anchor='w', 
+        fill=off_white, 
+        font=('Helvetica', 20)
+    )
     text_categories = tk.Text(frames[2], font=('Helvetica', 20), height=9, width=27, bg=off_white)
-    text_categories_window = canvas.create_window((canvas_width - 450) / 2 + 20, (canvas_height - body_height) / 2 - body_vertical_offset + title_height + 325, anchor='w', window=text_categories)
+    text_categories_window = canvas.create_window(
+        (canvas_width - 450) / 2 + 20, 
+        (canvas_height - body_height) / 2 - body_vertical_offset + title_height + 325, 
+        anchor='w', 
+        window=text_categories
+    )
 
     ###############
     # Right Frame #
@@ -217,7 +329,7 @@ def main():
     canvas = tk.Canvas(frames[3], width=canvas_width, height=canvas_height, bg=off_white, highlightthickness=0)
     canvas.pack(expand=True)
 
-    # Draw the rectangle for the Recipes section
+    # Rectangle for the Recipes section
     create_rounded_rectangle(
         canvas,
         (canvas_width - 450) / 2,  # x1
@@ -278,8 +390,7 @@ def main():
     text_frame = tk.Frame(recipe_canvas, bg=off_white)
     recipe_canvas.create_window((0, 0), window=text_frame, anchor='nw')
 
-    # Load and display recipes
-    recipes = load_recipes_from_csv('recipes.csv')
+    # Display recipes
     recipes_text = display_recipe_list(recipes)  # Get the formatted recipe list
 
     # Create a Text widget to display the recipes
@@ -287,27 +398,47 @@ def main():
     recipes_text_widget.insert(tk.END, recipes_text)  # Insert the formatted recipe list
     recipes_text_widget.config(state=tk.DISABLED)  # Make the text widget read-only
     recipes_text_widget.pack(fill=tk.BOTH, expand=True)
+
     # Buttons
     button_width = 28
     button_vertical_offset = 110
 
     button = tk.Button(frames[3], text="Find Recipes", bg=light_green, fg=off_white, font=('Helvetica', 20), width=button_width)
     button_find = canvas.create_window(canvas_width / 2, (canvas_height + 450) / 2 + button_vertical_offset, window=button)
-    button.config(command=find_button)
-
+    button.config(command=lambda: find_button(recipes, recipes_text_widget, must_include_text_widget, must_exclude_text_widget))
     root.mainloop()
 
 def upload_button():
     print("Upload Button Pressed")
 
-def add_button():
-    print("Add Button Pressed")
-
-def remove_button():
-    print("Remove Button Pressed")
-
-def find_button():
+def find_button(recipes, recipes_text_widget, must_include_text_widget, must_exclude_text_widget):
     print("Find Button Pressed")
+    
+    # Retrieve text from the "Must Include" and "Must Exclude" text boxes
+    must_include_text = must_include_text_widget.get("1.0", tk.END).strip()
+    must_exclude_text = must_exclude_text_widget.get("1.0", tk.END).strip()
+    
+    # Parse the text into lists of ingredients
+    must_include = [ingredient.strip() for ingredient in must_include_text.split(",") if ingredient.strip()]
+    must_exclude = [ingredient.strip() for ingredient in must_exclude_text.split(",") if ingredient.strip()]
+    print("include exclude", must_include, must_exclude)
+    # Find the new recipes based on the current ingredients and constraints
+    new_recipes = find_recipes(recipes, common_ingredients, must_include, must_exclude)
+    print("new recipes: ", new_recipes)
+    # Format the new recipe list for display
+    new_recipes_text = display_recipe_list(new_recipes)
+    print("new recipe text: ", new_recipes_text)
+    display_recipe_list_console(new_recipes)
+    
+    # Update the recipes_text_widget using the helper function
+    update_text_widget(recipes_text_widget, new_recipes_text)
+
+def update_text_widget(text_widget, new_content, readonly=True):
+    text_widget.config(state=tk.NORMAL)  # Enable editing
+    text_widget.delete(1.0, tk.END)      # Clear current content
+    text_widget.insert(tk.END, new_content)  # Insert new content
+    if readonly:
+        text_widget.config(state=tk.DISABLED)  # Make it read-only
 
 if __name__ == "__main__":
     main()
