@@ -1,13 +1,36 @@
 import tkinter as tk
+from PIL import Image, ImageTk  # Import Image and ImageTk from PIL
 from HTN import load_recipes_from_csv, display_recipe_list, find_recipes, State, pyhop, display_meal_plan
 import math
+
 off_white = '#fbffe4'
 light_green = '#3d8d7a'
 dark_green = '#2B5B50'
 
-def main():
-    
+def create_rounded_rectangle(canvas, x1, y1, x2, y2, radius=25, **kwargs):
+    points = [x1+radius, y1,
+              x1+radius, y1,
+              x2-radius, y1,
+              x2-radius, y1,
+              x2, y1,
+              x2, y1+radius,
+              x2, y1+radius,
+              x2, y2-radius,
+              x2, y2-radius,
+              x2, y2,
+              x2-radius, y2,
+              x2-radius, y2,
+              x1+radius, y2,
+              x1+radius, y2,
+              x1, y2,
+              x1, y2-radius,
+              x1, y2-radius,
+              x1, y1+radius,
+              x1, y1+radius,
+              x1, y1]
+    return canvas.create_polygon(points, **kwargs, smooth=True)
 
+def main():
     root = tk.Tk()
     root.title("Simple Tkinter Window")
     root.geometry("1920x1080")
@@ -21,7 +44,7 @@ def main():
     ##############
 
     # Add Header Background
-    canvas.create_rectangle(0, 0, 1920, 138, fill=light_green)
+    create_rounded_rectangle(canvas, 0, 0, 1920, 138, radius=20, fill=light_green)
 
     # Add Header Text
     canvas.create_text(230, 69, text="Fridge Friend", fill=off_white, font=('Helvetica', 50))
@@ -51,14 +74,23 @@ def main():
     canvas.pack(expand=True)
 
     # Body Rectangle
-    canvas.create_rectangle(
+    create_rounded_rectangle(
+        canvas,
         (canvas_width - 450) / 2, 
         (canvas_height - 450) / 2, 
         (canvas_width + 450) / 2, 
         (canvas_height + 450) / 2, 
+        radius=20,
         fill=light_green, 
         outline=''
     )
+
+    # Load and resize the image using PIL
+    image = Image.open("fridge.jpg")
+    image = image.resize((400, 400))  # Resize the image to fit within the rectangle
+    photo = ImageTk.PhotoImage(image)
+    canvas.create_image(canvas_width / 2, canvas_height / 2, image=photo)
+    canvas.image = photo  # Keep a reference to avoid garbage collection
 
     # Add Upload Image Button
     button = tk.Button(frames[0], text="Upload Image", bg=light_green, fg=off_white, font=('Helvetica', 20))
@@ -78,21 +110,25 @@ def main():
     title_height = body_height * title_percentage   
 
     # Body Rectangle
-    canvas.create_rectangle(
+    create_rounded_rectangle(
+        canvas,
         (canvas_width - 450) / 2, 
         (canvas_height - body_height) / 2 - body_vertical_offset, 
         (canvas_width + 450) / 2, 
         (canvas_height + body_height) / 2 - body_vertical_offset, 
+        radius=20,
         fill=light_green, 
         outline=''
     )
     
     # Title Bar
-    canvas.create_rectangle(
+    create_rounded_rectangle(
+        canvas,
         (canvas_width - 450) / 2, 
         (canvas_height - body_height) / 2 - body_vertical_offset, 
         (canvas_width + 450) / 2, 
         (canvas_height - (body_height - title_height)) / 2 - body_vertical_offset, 
+        radius=20,
         fill=dark_green, 
         outline=''
     )
@@ -131,21 +167,25 @@ def main():
     title_height = body_height * title_percentage   
 
     # Body Rectangle
-    canvas.create_rectangle(
+    create_rounded_rectangle(
+        canvas,
         (canvas_width - 450) / 2, 
         (canvas_height - body_height) / 2 - body_vertical_offset, 
         (canvas_width + 450) / 2, 
         (canvas_height + body_height) / 2 - body_vertical_offset, 
+        radius=20,
         fill=light_green, 
         outline=''
     )
     
     # Title Bar
-    canvas.create_rectangle(
+    create_rounded_rectangle(
+        canvas,
         (canvas_width - 450) / 2, 
         (canvas_height - body_height) / 2 - body_vertical_offset, 
         (canvas_width + 450) / 2, 
         (canvas_height - (body_height - title_height)) / 2 - body_vertical_offset, 
+        radius=20,
         fill=dark_green, 
         outline=''
     )
@@ -178,21 +218,25 @@ def main():
     canvas.pack(expand=True)
 
     # Draw the rectangle for the Recipes section
-    canvas.create_rectangle(
+    create_rounded_rectangle(
+        canvas,
         (canvas_width - 450) / 2,  # x1
         (canvas_height - body_height) / 2 - body_vertical_offset,  # y1
         (canvas_width + 450) / 2,  # x2
         (canvas_height + body_height) / 2 - body_vertical_offset,  # y2
+        radius=20,
         fill=light_green, 
         outline=''
     )
 
     # Draw the title bar
-    canvas.create_rectangle(
+    create_rounded_rectangle(
+        canvas,
         (canvas_width - 450) / 2, 
         (canvas_height - body_height) / 2 - body_vertical_offset, 
         (canvas_width + 450) / 2, 
         (canvas_height - (body_height - title_height)) / 2 - body_vertical_offset, 
+        radius=20,
         fill=dark_green, 
         outline=''
     )
@@ -264,8 +308,6 @@ def remove_button():
 
 def find_button():
     print("Find Button Pressed")
-
-
 
 if __name__ == "__main__":
     main()
