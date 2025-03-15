@@ -227,7 +227,7 @@ def display_recipe_details(recipe):
 
 
 # Function to filter recipes based on user constraints
-def find_recipes(recipes, all_ingredients, must_use=None, exclude=None):
+# def find_recipes(recipes, all_ingredients, must_use=None, exclude=None):
     matching_recipes = []
     unique_recipe_ids = set()  # Track unique recipe IDs to avoid duplicates
     
@@ -249,6 +249,8 @@ def find_recipes(recipes, all_ingredients, must_use=None, exclude=None):
         
         # Check ingredient availability and quantities
         has_enough_ingredients = True
+        print(recipe['name'])
+        print("\n", all_ingredients)
         for ingredient, recipe_quantity in recipe['ingredients']:
             ingredient_lower = ingredient.lower()
             if ingredient_lower not in all_ingredients:
@@ -262,11 +264,53 @@ def find_recipes(recipes, all_ingredients, must_use=None, exclude=None):
                     break
         
         if has_enough_ingredients:
-            matching_recipes.append(recipe)
+            if recipe not in matching_recipes:
+                matching_recipes.append(recipe)
+            # unique_recipe_ids.add(recipe['id'])
+    
+    return matching_recipes
+def find_recipes(recipes, all_ingredients, must_use=None, exclude=None):
+    matching_recipes = []
+    unique_recipe_ids = set()  # Track unique recipe IDs to avoid duplicates
+    
+    # Convert all_ingredients keys to lowercase for consistent lookup
+    all_ingredients = {k.lower(): v for k, v in all_ingredients.items()}
+    
+    # Convert must_use and exclude to lowercase for consistent matching
+    if must_use:
+        must_use = [ingredient.lower() for ingredient in must_use]
+    if exclude:
+        exclude = [ingredient.lower() for ingredient in exclude]
+    
+    for recipe in recipes:
+        # Skip if recipe ID has already been added
+        if recipe['id'] in unique_recipe_ids:
+            continue
+            
+        # Extract ingredient names from the recipe
+        recipe_ingredients = [ing[0].lower() for ing in recipe['ingredients']]
+        
+        # Check "must use" constraint
+        if must_use and not all(must_ingredient in recipe_ingredients for must_ingredient in must_use):
+            continue
+        
+        # Check "exclude" constraint
+        if exclude and any(exclude_ingredient in recipe_ingredients for exclude_ingredient in exclude):
+            continue
+        
+        # Check if at least one ingredient is in all_ingredients
+        has_at_least_one_ingredient = any(
+            ingredient_lower in all_ingredients
+            for ingredient_lower in recipe_ingredients
+        )
+        
+        # If at least one ingredient is available, add the recipe to the list
+        if has_at_least_one_ingredient:
+            if recipe not in matching_recipes:
+                matching_recipes.append(recipe)
             unique_recipe_ids.add(recipe['id'])
     
     return matching_recipes
-
 
 # Function to get user-specific ingredients
 def get_user_ingredients():
@@ -288,17 +332,18 @@ def display_meal_plan(meal_plan):
     for day, meal, recipe in meal_plan:
         print(f"Day {day}, Meal {meal}: {recipe['name']} ({recipe['area']})")
 
+# Common ingredients as a dictionary (ingredient: quantity or 'infinite')
+common_ingredients = {
+    "salt": "infinite",
+    "white sugar": "infinite",
+    "butter": "infinite",
+    "white rice": "infinite",
+    "olive oil": "infinite",
+    "vegetable oil": "infinite",
+}
 
 def main():
-    # Common ingredients as a dictionary (ingredient: quantity or 'infinite')
-    common_ingredients = {
-        "salt": "infinite",
-        "white sugar": "infinite",
-        "butter": "infinite",
-        "white rice": "infinite",
-        "olive oil": "infinite",
-        "vegetable oil": "infinite",
-    }
+    
 
     # Allow the user to view and edit the assumed ingredients
     print("Welcome to the Recipe Finder!")
