@@ -10,7 +10,7 @@ def detect_objects(image_path, model_id="group_work/2"):
     """Run object detection using Roboflow inference API."""
     result = CLIENT.infer(image_path, model_id=model_id)
     
-    detected_items = {prediction["class"] for prediction in result["predictions"]}
+    detected_items = {prediction["class"].title().replace("_", " ") for prediction in result["predictions"]}
     return detected_items
 
 if __name__ == "__main__":
