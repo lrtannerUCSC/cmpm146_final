@@ -306,6 +306,12 @@ common_ingredients = {
     "oil": "infinite",
 }
 
+substitution_ingredients = {
+    'milk': ['almond milk', 'soy milk', 'oat milk'], 
+    'sugar': ['honey', 'maple syrup'],
+    'chicken': ['tofu', 'beef']
+}
+
 def main():
     
 
@@ -319,6 +325,15 @@ def main():
 
     # Combine user_ingredients and common_ingredients (user_ingredients takes precedence)
     all_ingredients = {**common_ingredients, **user_ingredients}
+
+    # Substitution 
+    expanded_ingredients = set(all_ingredients.keys())  # User's ingredients
+    for ingredient in list(expanded_ingredients):
+        if ingredient in substitution_ingredients:
+            expanded_ingredients.update(substitution_ingredients[ingredient])  # Add substitutions
+    
+    all_ingredients = {ingredient: True for ingredient in expanded_ingredients}  # Convert back to dictionary
+
 
     # Get "must use" ingredients
     must_use = input("Enter ingredients that MUST be used (comma-separated, leave blank if none): ").strip().lower().split(",")
