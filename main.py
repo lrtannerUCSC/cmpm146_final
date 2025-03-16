@@ -359,6 +359,27 @@ def main():
         window=text_categories
     )
 
+    # Generate Button
+    generate_button = tk.Button(
+        frames[2], 
+        text="Generate", 
+        bg=light_green, 
+        fg=off_white, 
+        font=('Helvetica', 20), 
+        width=button_width
+    )
+    canvas.create_window(
+        canvas_width / 2, 
+        (canvas_height + 450) / 2 + button_vertical_offset, 
+        window=generate_button
+    )
+    generate_button.config(command=lambda: generate_meal_plan(
+        entry_meals_per_day.get(),
+        entry_number_of_days.get(),
+        entry_cuisine_preference.get(),
+        text_categories.get("1.0", tk.END).strip()
+    ))
+
     ###############
     # Right Frame #
     ###############
@@ -524,6 +545,72 @@ def find_button(recipes, recipes_text_widget, must_include_text_widget, must_exc
     
     # Update the recipes_text_widget using the helper function
     update_text_widget(recipes_text_widget, new_recipes_text)
+
+def generate_meal_plan(meals_per_day, number_of_days, cuisine_preference, categories):
+    print("Generate Button Pressed")
+    
+    # Convert inputs to appropriate types
+    try:
+        meals_per_day = int(meals_per_day) if meals_per_day else 3  # Default to 3 meals per day
+        number_of_days = int(number_of_days) if number_of_days else 7  # Default to 7 days
+    except ValueError:
+        print("Invalid input for meals per day or number of days. Using default values.")
+        meals_per_day = 3
+        number_of_days = 7
+    
+    # Split categories and cuisine preference into lists
+    categories_list = [cat.strip() for cat in categories.split(",") if cat.strip()]
+    cuisines_list = [cuisine.strip() for cuisine in cuisine_preference.split(",") if cuisine.strip()]
+    
+    # Create a state for HTN planning
+    state = State(recipes, common_ingredients)
+    state.matched_recipes = find_recipes(recipes, common_ingredients)  # Find matching recipes
+    
+    # Generate the meal plan using the HTN
+    meal_plan_found = pyhop.pyhop(state, [('plan_meals', meals_per_day, number_of_days, cuisines_list)], verbose=0)
+    
+    # Display the meal plan in a pop-up window
+    if meal_plan_found is not False:
+        meal_plan_text = display_meal_plan(state.meal_plan)
+        show_meal_plan_popup(meal_plan_text)
+    else:
+        show_meal_plan_popup("No valid meal plan could be generated.")
+
+def show_meal_plan_popup(meal_plan_text):
+    # Create a new popup window
+    popup = tk.Toplevel()
+    popup.title("Meal Plan")
+    popup.geometry("600x400")
+    popup.configure(bg=off_white)
+
+    # Add a label for the meal plan
+    label = tk.Label(popup, text="Your Meal Plan", bg=off_white, fg=dark_green, font=('Helvetica', 20))
+    label.pack(pady=10)
+
+    # Add a text widget to display the meal plan
+    meal_plan_text_widget = tk.Text(
+        popup, 
+        font=('Helvetica', 14), 
+        wrap=tk.WORD, 
+        bg=off_white, 
+        fg=dark_green, 
+        height=15, 
+        width=70
+    )
+    meal_plan_text_widget.pack(pady=10, padx=10, fill=tk.BOTH, expand=True)
+    meal_plan_text_widget.insert(tk.END, meal_plan_text)
+    meal_plan_text_widget.config(state=tk.DISABLED)  # Make the text widget read-only
+
+    # Add a close button
+    close_button = tk.Button(
+        popup, 
+        text="Close", 
+        bg=light_green, 
+        fg=off_white, 
+        font=('Helvetica', 14), 
+        command=popup.destroy
+    )
+    close_button.pack(pady=10)
 
 def update_text_widget(text_widget, new_content, readonly=True):
     text_widget.config(state=tk.NORMAL)  # Enable editing

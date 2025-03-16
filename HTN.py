@@ -327,10 +327,16 @@ def get_user_ingredients():
 
 
 # Function to display the meal plan
-def display_meal_plan(meal_plan):
+def display_meal_plan_console(meal_plan):
     print("\nMeal Plan:")
     for day, meal, recipe in meal_plan:
         print(f"Day {day}, Meal {meal}: {recipe['name']} ({recipe['area']})")
+
+def display_meal_plan(meal_plan):
+    meal_plan_text = "Meal Plan:\n"
+    for day, meal, recipe in meal_plan:
+        meal_plan_text += f"Day {day}, Meal {meal}: {recipe['name']} ({recipe['area']})\n"
+    return meal_plan_text
 
 # Common ingredients as a dictionary (ingredient: quantity or 'infinite')
 common_ingredients = {
