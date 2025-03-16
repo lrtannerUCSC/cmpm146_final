@@ -302,7 +302,6 @@ def display_recipe_list_console(recipes):
 #     return recipe_list
 
 def display_recipe_list(recipes):
-    # Create a formatted string with recipe names
     recipe_list = ""
     for i, recipe in enumerate(recipes, 1):
         recipe_list += f"{i}. {recipe['name']}\n"  # Add recipe name with numbering

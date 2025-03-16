@@ -549,18 +549,27 @@ def find_button(recipes, recipes_text_widget, must_include_text_widget, must_exc
     # Parse the text into lists of ingredients
     must_include = [ingredient.strip() for ingredient in must_include_text.split(",") if ingredient.strip()]
     must_exclude = [ingredient.strip() for ingredient in must_exclude_text.split(",") if ingredient.strip()]
-    print("include exclude", must_include, must_exclude)
+    
     # Find the new recipes based on the current ingredients and constraints
     new_recipes = find_recipes(recipes, common_ingredients, must_include, must_exclude)
-    print("new recipes: ", new_recipes)
+    
     # Format the new recipe list for display
-    new_recipes_text = display_recipe_list(new_recipes)
-    print("new recipe text: ", new_recipes_text)
-    display_recipe_list_console(new_recipes)
+    new_recipes_text = "\n".join([f"{i+1}. {recipe['name']}" for i, recipe in enumerate(new_recipes)])
     
     # Update the recipes_text_widget using the helper function
     update_text_widget(recipes_text_widget, new_recipes_text)
+    
+    # Bind click events to recipe names
+    recipes_text_widget.tag_configure("clickable", foreground="blue", underline=True)
+    recipes_text_widget.tag_bind("clickable", "<Button-1>", lambda event: show_recipe_details(event, new_recipes))
+    
+    # Add tags to make recipe names clickable
+    for i, recipe in enumerate(new_recipes, 1):
+        start_index = f"{i}.0"  # Start index of the recipe name
+        end_index = f"{i}.end"  # End index of the recipe name
+        recipes_text_widget.tag_add("clickable", start_index, end_index)
 
+        
 def generate_meal_plan(meals_per_day, number_of_days, cuisine_preference, categories):
     print("Generate Button Pressed")
     
@@ -627,6 +636,54 @@ def show_meal_plan_popup(meal_plan_text):
     )
     close_button.pack(pady=10)
 
+def show_recipe_details(event, recipes):
+    # Get the clicked line number
+    clicked_index = event.widget.index(f"@{event.x},{event.y}")
+    line_number = int(clicked_index.split(".")[0])
+    
+    # Get the corresponding recipe
+    recipe = recipes[line_number - 1]
+    
+    # Create a popup window to display the recipe details
+    popup = tk.Toplevel()
+    popup.title(recipe['name'])
+    popup.geometry("600x400")
+    popup.configure(bg=off_white)
+    
+    # Add recipe details to the popup
+    details_text = f"Name: {recipe['name']}\n\n"
+    details_text += f"Category: {recipe['category']}\n"
+    details_text += f"Cuisine: {recipe['area']}\n\n"
+    details_text += "Ingredients:\n"
+    for ingredient, measurement in recipe['ingredients']:
+        details_text += f"- {ingredient}: {measurement}\n"
+    details_text += "\nInstructions:\n"
+    details_text += recipe['instructions']
+    
+    # Add a text widget to display the recipe details
+    details_widget = tk.Text(
+        popup, 
+        font=('Helvetica', 14), 
+        wrap=tk.WORD, 
+        bg=off_white, 
+        fg=dark_green, 
+        height=20, 
+        width=70
+    )
+    details_widget.pack(pady=10, padx=10, fill=tk.BOTH, expand=True)
+    details_widget.insert(tk.END, details_text)
+    details_widget.config(state=tk.DISABLED)  # Make the text widget read-only
+    
+    # Add a close button
+    close_button = tk.Button(
+        popup, 
+        text="Close", 
+        bg=light_green, 
+        fg=off_white, 
+        font=('Helvetica', 14), 
+        command=popup.destroy
+    )
+    close_button.pack(pady=10)
 def update_text_widget(text_widget, new_content, readonly=True):
     text_widget.config(state=tk.NORMAL)  # Enable editing
     text_widget.delete(1.0, tk.END)      # Clear current content
