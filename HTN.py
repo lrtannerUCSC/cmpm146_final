@@ -1,7 +1,61 @@
 import pyhop
 import csv
 import re
+import random
 
+# Define tag categories
+TAG_CATEGORIES = {
+    "meal_type": {
+        "breakfast": ["breakfast", "brunch", "pancake", "egg", "onthego", "fruity", "sausages", "bun", "fresh", "light"],
+        "lunch": ["lunch", "mainmeal", "sidedish", "salad", "soup", "sandwich", "streetfood"],
+        "dinner": ["dinner", "mainmeal", "sidedish", "salad", "soup", "sandwich", "streetfood"],
+        "snacks_desserts": ["snack", "desert", "treat", "cake", "pudding", "caramel", "chocolate", "tart"],
+        "special_occasions": ["datenight", "dinnerparty", "christmas", "easter", "halloween"],
+    },
+    "dish_type": {
+        "main_dish": ["mainmeal", "stew", "curry", "paella", "casserole", "bbq", "grilled", "pasta", "pie"],
+        "side_dish": ["sidedish", "salad", "soup", "vegetables", "beans", "pulse", "rice", "bread"],
+        "dessert": ["desert", "treat", "cake", "pudding", "caramel", "chocolate", "tart", "sweet"],
+    },
+    "flavor_profile": {
+        "savory": ["savory", "cheasy", "meat", "fish", "seafood", "shellfish", "beans", "pulse", "vegetables"],
+        "sweet": ["sweet", "fruity", "nutty", "caramel", "chocolate", "glazed"],
+        "spicy_strong": ["spicy", "chilli", "curry", "strongflavor", "sour"],
+        "mild": ["mild", "light", "warming", "warm"],
+    },
+    "dietary_preferences": {
+        "vegetarian_vegan": ["vegetarian", "vegan", "vegetables", "beans", "pulse"],
+        "low_calorie_carb": ["lowcalorie", "lowcarbs", "light"],
+        "high_fat_keto": ["highfat", "keto", "paleo"],
+        "dairy_free_gluten_free": ["dairy"],
+    },
+    "cooking_method": {
+        "baking": ["baking", "cake", "pie", "pudding", "tart"],
+        "grilling_bbq": ["bbq", "grilled"],
+        "stovetop": ["stew", "curry", "paella", "casserole", "soup"],
+        "quick_easy": ["onthego", "cheap", "streetfood", "sandwich"],
+    },
+    "texture_heaviness": {
+        "heavy_rich": ["heavy", "greasy", "calorific", "unhealthy", "highfat"],
+        "light_refreshing": ["light", "fresh", "salad", "summer", "lowcalorie"],
+    },
+    "occasion_seasonality": {
+        "seasonal": ["summer", "warming", "warm"],
+        "holiday_festive": ["christmas", "easter", "halloween"],
+        "special_occasions": ["datenight", "dinnerparty", "speciality"],
+    },
+    "ingredient_focus": {
+        "protein_sources": ["meat", "fish", "seafood", "shellfish", "beans", "pulse", "egg", "sausages"],
+        "vegetables": ["vegetables", "salad", "fresh"],
+        "dairy": ["cheasy", "dairy"],
+        "grains_carbs": ["pasta", "bun", "paella", "sandwich"],
+    },
+    "lifestyle_convenience": {
+        "quick_easy": ["onthego", "cheap", "streetfood", "snack"],
+        "indulgent": ["alcoholic", "hangoverfood", "treat", "unhealthy"],
+        "health_conscious": ["lowcalorie", "lowcarbs", "light", "fresh"],
+    },
+}
 
 # Helper function to extract numeric values from quantities
 def extract_numeric_value(quantity):
@@ -42,6 +96,7 @@ class State:
         self.matched_recipes = []  # List of matched recipes
         self.meal_plan = []  # List of planned meals
         self.used_recipes = set()  # Track used recipes to ensure variety
+        self.tag_categories = TAG_CATEGORIES # List of tag categories
 
 
 # HTN method to plan meals for a given number of days
@@ -62,23 +117,77 @@ def method_plan_day(state, day, meals_per_day, cuisines=None):
 
 
 # HTN method to plan a single meal
+import random
+
 def method_plan_meal(state, day, meal, cuisines=None):
     print(f"Planning Meal {meal} for Day {day}...")
+    
+    # Determine meal type based on time of day
+    if meal == 1:  # Breakfast
+        preferred_tags = state.tag_categories["meal_type"]["breakfast"]
+        dish_types = ["main_dish", "side_dish", "dessert"]  # Breakfast can include desserts
+    elif meal == 2:  # Lunch
+        preferred_tags = state.tag_categories["meal_type"]["lunch"]
+        dish_types = ["main_dish", "side_dish"]
+    elif meal == 3:  # Dinner
+        preferred_tags = state.tag_categories["meal_type"]["dinner"]
+        dish_types = ["main_dish", "side_dish", "dessert"]  # Dinner can include desserts
+    else:  # Snacks/Desserts
+        preferred_tags = state.tag_categories["meal_type"]["snacks_desserts"]
+        dish_types = ["dessert"]
+    
     # Filter recipes by cuisine if specified
     if cuisines:
         filtered_recipes = [recipe for recipe in state.matched_recipes if recipe['area'].lower() in cuisines]
     else:
         filtered_recipes = state.matched_recipes
-    if not filtered_recipes:
-        print("No recipes match the specified cuisines.")
-        return False
-    # Select a recipe that hasn't been used too often
-    for recipe in filtered_recipes:
-        if recipe['id'] not in state.used_recipes:
-            state.used_recipes.add(recipe['id'])
+    
+    # Shuffle the filtered recipes to introduce randomness
+    random.shuffle(filtered_recipes)
+    
+    # Select 2 recipes: one main dish and one side/dessert
+    selected_recipes = []
+    for dish_type in dish_types:
+        found = False
+        for recipe in filtered_recipes:
+            recipe_tags = recipe['tags'].split(',') if recipe['tags'] else []
+            
+            # Check if the recipe matches the dish type and preferred tags
+            if (any(tag in recipe_tags for tag in state.tag_categories["dish_type"][dish_type]) or
+                (dish_type == "main_dish" and not recipe_tags)) and \
+               (any(tag in recipe_tags for tag in preferred_tags) or not recipe_tags) and \
+               recipe['id'] not in state.used_recipes:
+                selected_recipes.append(recipe)
+                state.used_recipes.add(recipe['id'])
+                found = True
+                break  # Move to the next dish type after selecting one recipe
+        
+        # If no recipe matches the preferred tags, fall back to any non-dessert recipe
+        if not found and dish_type != "dessert":
+            for recipe in filtered_recipes:
+                recipe_tags = recipe['tags'].split(',') if recipe['tags'] else []
+                # Check if the recipe matches the dish type and is not a dessert
+                if (any(tag in recipe_tags for tag in state.tag_categories["dish_type"][dish_type]) or
+                    (dish_type == "main_dish" and not recipe_tags)) and \
+                   "dessert" not in recipe_tags and \
+                   recipe['id'] not in state.used_recipes:
+                    selected_recipes.append(recipe)
+                    state.used_recipes.add(recipe['id'])
+                    found = True
+                    break  # Move to the next dish type after selecting one recipe
+        
+        # If no recipe is found for the side dish, skip it
+        if not found and dish_type == "side_dish":
+            print(f"No suitable side dish found for Meal {meal} on Day {day}. Skipping side dish.")
+            continue
+    
+    # Add the selected recipes to the meal plan
+    if selected_recipes:
+        for recipe in selected_recipes:
             state.meal_plan.append((day, meal, recipe))
             print(f"Selected: {recipe['name']} ({recipe['area']})")
-            return []
+        return []
+    
     print("No unique recipes left for the specified constraints.")
     return False
 
