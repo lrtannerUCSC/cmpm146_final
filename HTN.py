@@ -399,7 +399,7 @@ def display_meal_plan_console(meal_plan):
         print(f"Day {day}, Meal {meal}: {recipe['name']} ({recipe['area']})")
 
 def display_meal_plan(meal_plan):
-    meal_plan_text = "Meal Plan:\n"
+    meal_plan_text = ""
     for day, meal, recipe in meal_plan:
         meal_plan_text += f"Day {day}, Meal {meal}: {recipe['name']} ({recipe['area']})\n"
     return meal_plan_text
