@@ -596,11 +596,12 @@ def generate_meal_plan(meals_per_day, number_of_days, cuisine_preference, catego
     # Display the meal plan in a pop-up window
     if meal_plan_found is not False:
         meal_plan_text = display_meal_plan(state.meal_plan)
-        show_meal_plan_popup(meal_plan_text)
+        meal_plan_recipes = [recipe for _, _, recipe in state.meal_plan]  # Extract recipes from the meal plan
+        show_meal_plan_popup(meal_plan_text, meal_plan_recipes)
     else:
-        show_meal_plan_popup("No valid meal plan could be generated.")
+        show_meal_plan_popup("No valid meal plan could be generated.", [])
 
-def show_meal_plan_popup(meal_plan_text):
+def show_meal_plan_popup(meal_plan_text, meal_plan_recipes):
     # Create a new popup window
     popup = tk.Toplevel()
     popup.title("Meal Plan")
@@ -624,6 +625,16 @@ def show_meal_plan_popup(meal_plan_text):
     meal_plan_text_widget.pack(pady=10, padx=10, fill=tk.BOTH, expand=True)
     meal_plan_text_widget.insert(tk.END, meal_plan_text)
     meal_plan_text_widget.config(state=tk.DISABLED)  # Make the text widget read-only
+
+    # Bind click events to recipe names
+    meal_plan_text_widget.tag_configure("clickable", foreground="blue", underline=True)
+    meal_plan_text_widget.tag_bind("clickable", "<Button-1>", lambda event: show_recipe_details(event, meal_plan_recipes))
+
+    # Add tags to make recipe names clickable
+    for i, recipe in enumerate(meal_plan_recipes, 1):
+        start_index = f"{i}.0"  # Start index of the recipe name
+        end_index = f"{i}.end"  # End index of the recipe name
+        meal_plan_text_widget.tag_add("clickable", start_index, end_index)
 
     # Add a close button
     close_button = tk.Button(
@@ -684,6 +695,8 @@ def show_recipe_details(event, recipes):
         command=popup.destroy
     )
     close_button.pack(pady=10)
+
+
 def update_text_widget(text_widget, new_content, readonly=True):
     text_widget.config(state=tk.NORMAL)  # Enable editing
     text_widget.delete(1.0, tk.END)      # Clear current content
