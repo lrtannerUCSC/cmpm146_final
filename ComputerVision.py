@@ -1,3 +1,4 @@
+import os
 from inference_sdk import InferenceHTTPClient
 
 # Initialize the Roboflow Inference Client
@@ -14,7 +15,7 @@ def detect_objects(image_path, model_id="group_work/2"):
     return detected_items
 
 if __name__ == "__main__":
-    image_path = "fridge.jpg"
+    image_path = "temp_fridge.jpg" if os.path.exists("temp_fridge.jpg") else "fridge.jpg"
     
     detected_items = detect_objects(image_path)
     

@@ -1,4 +1,6 @@
 import tkinter as tk
+import os
+from tkinter import filedialog
 from PIL import Image, ImageTk  # Import Image and ImageTk from PIL
 from HTN import load_recipes_from_csv, display_recipe_list, display_recipe_list_console, find_recipes, State, pyhop, display_meal_plan, common_ingredients
 
@@ -6,6 +8,7 @@ from HTN import load_recipes_from_csv, display_recipe_list, display_recipe_list_
 off_white = '#fbffe4'
 light_green = '#3d8d7a'
 dark_green = '#2B5B50'
+temp_image_path = "temp_fridge.jpg"
 
 def create_rounded_rectangle(canvas, x1, y1, x2, y2, radius=25, **kwargs):
     points = [x1+radius, y1,
@@ -66,37 +69,6 @@ def main():
 
     canvas_width = 0.25 * 1920
     canvas_height = 1080 - 138
-
-    ##############
-    # Left Frame #
-    ##############
-
-    canvas = tk.Canvas(frames[0], width=canvas_width, height=canvas_height, highlightthickness=0, bg=off_white)
-    canvas.pack(expand=True)
-
-    # Body Rectangle
-    create_rounded_rectangle(
-        canvas,
-        (canvas_width - 450) / 2, 
-        (canvas_height - 450) / 2, 
-        (canvas_width + 450) / 2, 
-        (canvas_height + 450) / 2, 
-        radius=20,
-        fill=light_green, 
-        outline=''
-    )
-
-    # Load and resize the image using PIL
-    image = Image.open("fridge.jpg")
-    image = image.resize((400, 400))  # Resize the image to fit within the rectangle
-    photo = ImageTk.PhotoImage(image)
-    canvas.create_image(canvas_width / 2, canvas_height / 2, image=photo)
-    canvas.image = photo  # Keep a reference to avoid garbage collection
-
-    # Add Upload Image Button
-    button = tk.Button(frames[0], text="Upload Image", bg=light_green, fg=off_white, font=('Helvetica', 20))
-    button_upload = canvas.create_window(canvas_width / 2, (canvas_height + 450) / 2 + 30, window=button)
-    button.config(command=upload_button)
 
     #####################
     # Center Left Frame #
@@ -406,10 +378,53 @@ def main():
     button = tk.Button(frames[3], text="Find Recipes", bg=light_green, fg=off_white, font=('Helvetica', 20), width=button_width)
     button_find = canvas.create_window(canvas_width / 2, (canvas_height + 450) / 2 + button_vertical_offset, window=button)
     button.config(command=lambda: find_button(recipes, recipes_text_widget, must_include_text_widget, must_exclude_text_widget))
+    
+    ##############
+    # Left Frame #
+    ##############
+
+    canvas = tk.Canvas(frames[0], width=canvas_width, height=canvas_height, highlightthickness=0, bg=off_white)
+    canvas.pack(expand=True)
+
+    # Body Rectangle
+    create_rounded_rectangle(
+        canvas,
+        (canvas_width - 450) / 2, 
+        (canvas_height - 450) / 2, 
+        (canvas_width + 450) / 2, 
+        (canvas_height + 450) / 2, 
+        radius=20,
+        fill=light_green, 
+        outline=''
+    )
+
+    if os.path.exists(temp_image_path):
+        image = Image.open(temp_image_path)
+    else:
+        image = Image.open("fridge.jpg")
+    image = image.resize((400, 400))
+    photo = ImageTk.PhotoImage(image)
+    canvas.create_image(canvas_width / 2, canvas_height / 2, image=photo)
+    canvas.image = photo
+
+    button = tk.Button(frames[0], text="Upload Image", bg=light_green, fg=off_white, font=('Helvetica', 20))
+    button_upload = canvas.create_window(canvas_width / 2, (canvas_height + 450) / 2 + 30, window=button)
+    button.config(command=lambda: upload_button(canvas, canvas_width, canvas_height))
+
+    #why does this even work?
     root.mainloop()
 
-def upload_button():
-    print("Upload Button Pressed")
+def upload_button(canvas, canvas_width, canvas_height):
+    global temp_image_path
+    file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg;*.jpeg;")])
+    if file_path:
+        img = Image.open(file_path)
+        img = img.resize((400, 400))  # Resize the image
+        img.save(temp_image_path)  # Save a temporary local copy
+        photo = ImageTk.PhotoImage(img)
+        canvas.create_image(canvas_width / 2, canvas_height / 2, image=photo)
+        canvas.image = photo  # Keep reference to avoid garbage collection
+
 
 def find_button(recipes, recipes_text_widget, must_include_text_widget, must_exclude_text_widget):
     print("Find Button Pressed")
