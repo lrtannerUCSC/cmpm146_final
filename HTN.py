@@ -226,49 +226,6 @@ def display_recipe_details(recipe):
     print(recipe['instructions'])
 
 
-# Function to filter recipes based on user constraints
-# def find_recipes(recipes, all_ingredients, must_use=None, exclude=None):
-    matching_recipes = []
-    unique_recipe_ids = set()  # Track unique recipe IDs to avoid duplicates
-    
-    for recipe in recipes:
-        # Skip if recipe ID has already been added
-        if recipe['id'] in unique_recipe_ids:
-            continue
-            
-        # Extract ingredient names from the recipe
-        recipe_ingredients = [ing[0].lower() for ing in recipe['ingredients']]
-        
-        # Check "must use" constraint
-        if must_use and not all(must_ingredient in recipe_ingredients for must_ingredient in must_use):
-            continue
-        
-        # Check "exclude" constraint
-        if exclude and any(exclude_ingredient in recipe_ingredients for exclude_ingredient in exclude):
-            continue
-        
-        # Check ingredient availability and quantities
-        has_enough_ingredients = True
-        print(recipe['name'])
-        print("\n", all_ingredients)
-        for ingredient, recipe_quantity in recipe['ingredients']:
-            ingredient_lower = ingredient.lower()
-            if ingredient_lower not in all_ingredients:
-                has_enough_ingredients = False
-                break
-            if all_ingredients[ingredient_lower] != 'infinite':
-                user_qty = extract_numeric_value(all_ingredients[ingredient_lower])
-                recipe_qty = extract_numeric_value(recipe_quantity)
-                if user_qty < recipe_qty:
-                    has_enough_ingredients = False
-                    break
-        
-        if has_enough_ingredients:
-            if recipe not in matching_recipes:
-                matching_recipes.append(recipe)
-            # unique_recipe_ids.add(recipe['id'])
-    
-    return matching_recipes
 def find_recipes(recipes, all_ingredients, must_use=None, exclude=None):
     matching_recipes = []
     unique_recipe_ids = set()  # Track unique recipe IDs to avoid duplicates
@@ -327,19 +284,26 @@ def get_user_ingredients():
 
 
 # Function to display the meal plan
-def display_meal_plan(meal_plan):
+def display_meal_plan_console(meal_plan):
     print("\nMeal Plan:")
     for day, meal, recipe in meal_plan:
         print(f"Day {day}, Meal {meal}: {recipe['name']} ({recipe['area']})")
 
+def display_meal_plan(meal_plan):
+    meal_plan_text = "Meal Plan:\n"
+    for day, meal, recipe in meal_plan:
+        meal_plan_text += f"Day {day}, Meal {meal}: {recipe['name']} ({recipe['area']})\n"
+    return meal_plan_text
+
 # Common ingredients as a dictionary (ingredient: quantity or 'infinite')
 common_ingredients = {
     "salt": "infinite",
-    "white sugar": "infinite",
+    "sugar": "infinite",
     "butter": "infinite",
-    "white rice": "infinite",
+    "rice": "infinite",
     "olive oil": "infinite",
     "vegetable oil": "infinite",
+    "oil": "infinite",
 }
 
 def main():
