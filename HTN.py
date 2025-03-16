@@ -25,6 +25,7 @@ def load_recipes_from_csv(filename):
                 'name': row['name'],
                 'category': row['category'],
                 'area': row['area'],
+                'tags': row['tags'],
                 'instructions': row['instructions'],
                 'ingredients': ingredients,  # Store as list of tuples
             }
