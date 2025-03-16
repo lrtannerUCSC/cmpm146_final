@@ -420,12 +420,12 @@ def main():
     text_frame = tk.Frame(recipe_canvas, bg=off_white)
     recipe_canvas.create_window((0, 0), window=text_frame, anchor='nw')
 
-    # Display recipes
-    recipes_text = display_recipe_list(recipes)  # Get the formatted recipe list
+    # # Display recipes
+    # recipes_text = display_recipe_list(recipes)  # Get the formatted recipe list
 
     # Create a Text widget to display the recipes
     recipes_text_widget = tk.Text(text_frame, font=('Helvetica', 16), wrap=tk.NONE, bg=off_white, fg=dark_green)
-    recipes_text_widget.insert(tk.END, recipes_text)  # Insert the formatted recipe list
+    # recipes_text_widget.insert(tk.END, recipes_text)  # Insert the formatted recipe list
     recipes_text_widget.config(state=tk.DISABLED)  # Make the text widget read-only
     recipes_text_widget.pack(fill=tk.BOTH, expand=True)
 
