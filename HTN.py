@@ -364,14 +364,14 @@ def find_recipes(recipes, all_ingredients, must_use=None, exclude=None):
         if exclude and any(exclude_ingredient in recipe_ingredients for exclude_ingredient in exclude):
             continue
         
-        # Check if at least one ingredient is in all_ingredients
-        has_at_least_one_ingredient = any(
-            ingredient_lower in all_ingredients
-            for ingredient_lower in recipe_ingredients
-        )
+        # Calculate the number of ingredients the user has (including substitutions)
+        total_ingredients = len(recipe_ingredients)
+        if total_ingredients == 0:
+            continue
+        matching_count = sum(1 for ingredient in recipe_ingredients if ingredient in all_ingredients)
         
-        # If at least one ingredient is available, add the recipe to the list
-        if has_at_least_one_ingredient:
+        # Check if at least 50% of ingredients are available
+        if (matching_count / total_ingredients) >= 0.5:
             if recipe not in matching_recipes:
                 matching_recipes.append(recipe)
             unique_recipe_ids.add(recipe['id'])
